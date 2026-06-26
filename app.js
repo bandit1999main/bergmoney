@@ -883,6 +883,7 @@ function printMonthlyReport() {
     const officeName = appState.settings.officeName || "ที่ทำการไปรษณีย์มาบตาพุด";
     const officePhone = (monthlyDocs.length > 0 && monthlyDocs[0].officePhone) ? monthlyDocs[0].officePhone : "088-987-8635";
     const officerPosition = appState.settings.officerPosition || "หัวหน้าที่ทำการไปรษณีย์มาบตาพุด";
+    const todayFormatted = new Date().toLocaleDateString("th-TH", { day: "numeric", month: "long", year: "numeric" });
 
     printSection.innerHTML = `
         <div class="print-header" style="position: relative; display: flex; align-items: center; justify-content: center; height: 60px; border-bottom: 2px solid #000000; margin-bottom: 18px; padding-bottom: 6px;">
@@ -898,13 +899,13 @@ function printMonthlyReport() {
             </tr>
             <tr>
                 <td style="font-weight: bold; width: 15%;">ที่:</td>
-                <td style="width: 50%;">..........................................................................................</td>
+                <td style="width: 50%;">ปณท ปข.2(21150)/......................................................</td>
                 <td style="width: 10%; font-weight: bold;">วันที่:</td>
-                <td style="width: 25%;">.....................................................</td>
+                <td style="width: 25%;">${todayFormatted}</td>
             </tr>
             <tr>
                 <td style="font-weight: bold; border-bottom: 1px solid #000000; padding-bottom: 6px;">เรื่อง:</td>
-                <td colspan="3" style="border-bottom: 1px solid #000000; padding-bottom: 6px;">บัญชีสรุปรายการซื้อและการจ้างประจำเดือน .................................................</td>
+                <td colspan="3" style="border-bottom: 1px solid #000000; padding-bottom: 6px;">บัญชีสรุปรายการซื้อและการจ้างประจำเดือน <b>${monthName} ${yearName}</b></td>
             </tr>
             <tr>
                 <td style="font-weight: bold; padding-top: 6px;">เรียน:</td>
@@ -916,7 +917,7 @@ function printMonthlyReport() {
             ตามคำสั่ง ปณท ที่ 4/2566 เรื่อง มอบอำนาจการซื้อและการจ้างพัสดุบางประเภทให้หัวหน้าที่ทำการต่างๆ ของ บริษัท ไปรษณีย์จำกัด สั่ง ณ วันที่ 4 ตุลาคม พ.ศ. 2566 กำหนดให้ที่ทำการและศูนย์ไปรษณีย์ต่างๆ จัดทำบัญชีสรุปรายการซื้อและการจ้างให้สำนักงานไปรษณีย์ต้นสังกัดทราบอย่างช้าไม่เกิน วันที่ 10 ของเดือนถัดไปนั้น
         </p>
         <p style="text-indent: 1.5cm; margin-bottom: 12px; font-size: 11pt; line-height: 1.35;">
-            ${officeName} ขอสรุปการซื้อและการจ้างประจำเดือน <b>${monthName}</b> พ.ศ. <b>${yearName}</b> มาเพื่อทราบ
+            ${officeName} ขอสรุปการซื้อและการจ้างประจำเดือน <b>${monthName}</b> <b>${yearName}</b> มาเพื่อทราบ
         </p>
 
         <p style="font-weight: bold; margin-bottom: 8px; font-size: 11pt;">มีการซื้อและการจ้างรายละเอียดดังนี้</p>
