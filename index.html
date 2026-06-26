@@ -780,9 +780,10 @@
                             <thead>
                                 <tr>
                                     <th style="width: 15%;">รหัสครุภัณฑ์</th>
-                                    <th style="width: 35%;">ชื่อครุภัณฑ์/รายการ</th>
+                                    <th style="width: 30%;">ชื่อครุภัณฑ์/รายการ</th>
                                     <th style="width: 20%;">หมวดหมู่รายจ่าย</th>
-                                    <th style="width: 20%;">หมายเหตุ</th>
+                                    <th style="width: 10%; text-align: center;">จำนวน</th>
+                                    <th style="width: 15%;">หมายเหตุ</th>
                                     <th style="width: 10%; text-align: center;">จัดการ</th>
                                 </tr>
                             </thead>
@@ -940,6 +941,12 @@
                         </select>
                     </div>
                     <div class="form-group">
+                        <label for="durableQty">จำนวน</label>
+                        <input type="number" id="durableQty" placeholder="เช่น 10" min="0" required>
+                    </div>
+                </div>
+                <div class="form-grid" style="grid-template-columns: 1fr;">
+                    <div class="form-group">
                         <label for="durableRemark">หมายเหตุ</label>
                         <input type="text" id="durableRemark" placeholder="เช่น ใช้งานประจำ ปณ.มาบตาพุด">
                     </div>
@@ -955,6 +962,6 @@
     <!-- Print Preview Container -->
     <div class="print-container" id="printSection"></div>
 
-    <script src="app.js?v=1.2.0"></script>
+    <script src="app.js?v=1.3.0"></script>
 </body>
 </html>

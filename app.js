@@ -59,7 +59,7 @@ function initApp() {
         }
     } else {
         appState.durables = [
-            { id: "CUR-001", code: "51090902-001", name: "กระดาษ A4 Double A 80g", category: "stationery", remark: "ใช้ประจำสำนักงาน" }
+            { id: "CUR-001", code: "51090902-001", name: "กระดาษ A4 Double A 80g", category: "stationery", qty: 10, remark: "ใช้ประจำสำนักงาน" }
         ];
         // จำลองข้อมูลเพื่อความสวยงามในครั้งแรก
         appState.documents = [
@@ -137,7 +137,7 @@ function initApp() {
 
     if (!appState.durables) {
         appState.durables = [
-            { id: "CUR-001", code: "51090902-001", name: "กระดาษ A4 Double A 80g", category: "stationery", remark: "ใช้ประจำสำนักงาน" }
+            { id: "CUR-001", code: "51090902-001", name: "กระดาษ A4 Double A 80g", category: "stationery", qty: 10, remark: "ใช้ประจำสำนักงาน" }
         ];
         saveDataToStorage();
     }
@@ -572,18 +572,20 @@ function renderDurableTable() {
     tbody.innerHTML = "";
 
     if (appState.durables.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-secondary);">ไม่มีข้อมูลทะเบียนครุภัณฑ์</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-secondary);">ไม่มีข้อมูลทะเบียนครุภัณฑ์</td></tr>`;
         return;
     }
 
     appState.durables.forEach(d => {
         const cat = BUDGET_RULES[d.category];
         const catName = cat ? cat.name : "-";
+        const qtyVal = typeof d.qty !== 'undefined' ? d.qty : 0;
         const row = `
             <tr>
                 <td style="font-weight:600;">${d.code}</td>
                 <td>${d.name}</td>
                 <td>${catName}</td>
+                <td style="text-align:center;">${qtyVal}</td>
                 <td>${d.remark || "-"}</td>
                 <td>
                     <div style="display:flex; gap:0.5rem; justify-content:center;">
@@ -607,6 +609,7 @@ function handleDurableSubmit(e) {
     const code = document.getElementById("durableCode").value.trim();
     const name = document.getElementById("durableName").value.trim();
     const category = document.getElementById("durableCategory").value;
+    const qty = parseInt(document.getElementById("durableQty").value) || 0;
     const remark = document.getElementById("durableRemark").value.trim();
 
     if (id) {
@@ -616,6 +619,7 @@ function handleDurableSubmit(e) {
             durable.code = code;
             durable.name = name;
             durable.category = category;
+            durable.qty = qty;
             durable.remark = remark;
         }
     } else {
@@ -625,6 +629,7 @@ function handleDurableSubmit(e) {
             code,
             name,
             category,
+            qty,
             remark
         };
         appState.durables.push(newDurable);
@@ -643,6 +648,7 @@ window.editDurable = function(id) {
     document.getElementById("durableCode").value = d.code;
     document.getElementById("durableName").value = d.name;
     document.getElementById("durableCategory").value = d.category;
+    document.getElementById("durableQty").value = typeof d.qty !== 'undefined' ? d.qty : 0;
     document.getElementById("durableRemark").value = d.remark || "";
     
     document.getElementById("durableModalTitle").innerText = "แก้ไขข้อมูลครุภัณฑ์";
