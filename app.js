@@ -715,7 +715,7 @@ function printDocument(docId) {
     const dateFormatted = docDateObj.toLocaleDateString("th-TH", { day: "numeric", month: "long", year: "numeric" });
 
     const catKeys = Object.keys(BUDGET_RULES);
-    let categoryCheckboxesHtml = `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; margin: 8px 0; font-size: 12pt; border: 1px solid #000000; padding: 8px 12px; border-radius: 4px; line-height: 1.3;">`;
+    let categoryCheckboxesHtml = `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; margin: 10px 0; font-size: 10pt; border: 1px solid #000000; padding: 10px 14px; border-radius: 4px; line-height: 1.35;">`;
     catKeys.forEach(k => {
         const isChecked = doc.itemCategory === k;
         const symbol = isChecked ? "[ ✓ ]" : "[ &nbsp; ]";
@@ -727,11 +727,11 @@ function printDocument(docId) {
     // ตารางแสดงเฉพาะรายการที่มีข้อมูลจริงโดยไม่เผื่อแถวว่างเพิ่มเติมตามที่ผู้ใช้ร้องขอ
 
     printSection.innerHTML = `
-        <div class="print-header" style="position: relative; display: flex; align-items: center; justify-content: center; height: 50px;">
-            <img src="thailand-post-logo.png" alt="ไปรษณีย์ไทย" class="print-logo" style="height: 38px; object-fit: contain; position: absolute; left: 0; bottom: 6px;">
-            <div style="font-weight: bold; font-size: 12pt; margin-bottom: 6px;">บันทึกข้อความ</div>
+        <div class="print-header" style="position: relative; display: flex; align-items: center; justify-content: center; height: 60px; border-bottom: 2px solid #000000; margin-bottom: 18px; padding-bottom: 6px;">
+            <img src="thailand-post-logo.png" alt="ไปรษณีย์ไทย" class="print-logo" style="height: 48px; object-fit: contain; position: absolute; left: 0; bottom: 6px;">
+            <div style="font-weight: bold; font-size: 20pt; margin-bottom: 0;">บันทึกข้อความ</div>
         </div>
-        <table class="memo-table" style="font-size: 12pt;">
+        <table class="memo-table" style="font-size: 11pt; margin-bottom: 18px;">
             <tr>
                 <td style="width: 15%; font-weight: bold;">หน่วยงาน:</td>
                 <td colspan="3">${doc.officeName} &nbsp;&nbsp; โทร. ${doc.officePhone}</td>
@@ -752,18 +752,18 @@ function printDocument(docId) {
             </tr>
         </table>
         
-        <p style="text-indent: 1.5cm; margin-bottom: 6px; font-size: 12pt; line-height: 1.3;">
+        <p style="text-indent: 1.5cm; margin-bottom: 8px; font-size: 11pt; line-height: 1.35;">
             ด้วย <b>ปณ.มาบตาพุด</b> มีความจำเป็นต้องการจัดซื้อและจัดจ้างพัสดุบางประเภท (ที่มอบอำนาจการซื้อและการจ้างตามคำสั่ง ปณท ที่ 4/2566) ดังนี้:
         </p>
 
         ${categoryCheckboxesHtml}
 
-        <div style="display: flex; gap: 30px; margin: 8px 0; font-weight: bold; font-size: 12pt;">
+        <div style="display: flex; gap: 30px; margin: 10px 0; font-weight: bold; font-size: 11pt;">
             <span>[ ${doc.hasQuotation === 'true' ? '✓' : '&nbsp;'} ] มีใบเสนอราคา</span>
             <span>[ ${doc.hasQuotation === 'false' ? '✓' : '&nbsp;'} ] ไม่มีใบเสนอราคา</span>
         </div>
 
-        <table class="item-table" style="font-size: 12pt; border-collapse: collapse; width: 100%;">
+        <table class="item-table" style="font-size: 10.5pt; border-collapse: collapse; width: 100%; margin: 14px 0;">
             <thead>
                 <tr>
                     <th rowspan="2" style="width: 5%; vertical-align: middle;">ลำดับ</th>
@@ -773,30 +773,30 @@ function printDocument(docId) {
                     <th rowspan="2" style="width: 12%; vertical-align: middle;">หมายเหตุ</th>
                 </tr>
                 <tr>
-                    <th style="font-size: 12pt; width: 12%;">ว.ด.ป.</th>
-                    <th style="font-size: 12pt; width: 8%;">จำนวน/ปริมาณ</th>
-                    <th style="font-size: 12pt; width: 12%;">จำนวนเงิน (บาท)</th>
-                    <th style="font-size: 12pt; width: 8%;">จำนวน/ปริมาณ</th>
-                    <th style="font-size: 12pt; width: 12%;">จำนวนเงิน (บาท)</th>
+                    <th style="font-size: 10.5pt; width: 12%;">ว.ด.ป.</th>
+                    <th style="font-size: 10.5pt; width: 8%;">จำนวน/ปริมาณ</th>
+                    <th style="font-size: 10.5pt; width: 12%;">จำนวนเงิน (บาท)</th>
+                    <th style="font-size: 10.5pt; width: 8%;">จำนวน/ปริมาณ</th>
+                    <th style="font-size: 10.5pt; width: 12%;">จำนวนเงิน (บาท)</th>
                 </tr>
             </thead>
             <tbody>
                 ${itemsRowsHtml}
                 <tr>
-                    <td colspan="6" style="text-align: right; font-weight: bold; padding: 4px 6px;">รวมเป็นเงินทั้งสิ้น</td>
-                    <td style="text-align: right; font-weight: bold; padding: 4px 6px;">${doc.total.toLocaleString("th-TH", { minimumFractionDigits: 2 })}</td>
+                    <td colspan="6" style="text-align: right; font-weight: bold; padding: 5px 6px;">รวมเป็นเงินทั้งสิ้น</td>
+                    <td style="text-align: right; font-weight: bold; padding: 5px 6px;">${doc.total.toLocaleString("th-TH", { minimumFractionDigits: 2 })}</td>
                     <td></td>
                 </tr>
             </tbody>
         </table>
 
-        <p style="text-indent: 1.5cm; margin-bottom: 12px; font-size: 12pt; line-height: 1.3;">
+        <p style="text-indent: 1.5cm; margin-bottom: 16px; font-size: 11pt; line-height: 1.35;">
             จึงเรียนมาเพื่อโปรดพิจารณาอนุญาต หากเห็นชอบจักได้ดำเนินการตามที่ ปณท มอบอำนาจการซื้อและการจ้างไว้ให้ต่อไป จักขอบคุณยิ่ง
         </p>
 
-        <div class="sig-section" style="margin-top: 15px; display: flex; justify-content: flex-end;">
-            <div class="sig-block" style="width: 45%; text-align: center; font-size: 12pt; line-height: 1.3;">
-                <p style="margin-bottom: 30px;">(ลงชื่อ)..............................................................</p>
+        <div class="sig-section" style="margin-top: 25px; display: flex; justify-content: flex-end;">
+            <div class="sig-block" style="width: 45%; text-align: center; font-size: 11pt; line-height: 1.35;">
+                <p style="margin-bottom: 35px;">(ลงชื่อ)..............................................................</p>
                 <p style="font-weight: bold;">(${doc.requesterName})</p>
                 <p>${doc.requesterPosition}</p>
                 <p style="margin-top: 5px;">............../............../..............</p>
