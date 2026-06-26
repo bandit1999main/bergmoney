@@ -1,0 +1,15 @@
+// Firestore Security Rules for bergmoney
+// ────────────────────────────────────────
+// Apply these rules in Firebase Console:
+// Firebase Console → Firestore Database → Rules
+// ────────────────────────────────────────
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // All authenticated users can read/write shared data
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

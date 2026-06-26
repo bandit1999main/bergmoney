@@ -1,8 +1,32 @@
 // ----------------------------------------------------
 // ระบบจัดซื้อจัดจ้าง บสค. 60 - ไปรษณีย์ไทย
-// สคริปต์หลักควบคุมการคำนวณและประมวลผล LocalStorage
+// v2.0 - Firebase Authentication & Firestore
 // ----------------------------------------------------
 
+import { loginWithGoogle, logout, onAuthChange } from "./auth.js";
+import {
+    saveSettings as fsSaveSettings,
+    loadSettings as fsLoadSettings,
+    addDocument as fsAddDocument,
+    getDocuments as fsGetDocuments,
+    fsDeleteDocument,
+    addInventoryItem as fsAddInventoryItem,
+    getInventory as fsGetInventory,
+    fsDeleteInventoryItem,
+    createOrUpdateUser,
+    getUser,
+    getAllUsers,
+    updateUserRole,
+    updateUserApproval,
+    removeUser,
+    getServerTimestamp,
+    migrateLocalStorageToFirestore,
+    checkIfDataExists
+} from "./firestore-service.js";
+
+// ----------------------------------------------------
+// ค่าคงที่และกฎงบประมาณ
+// ----------------------------------------------------
 const BUDGET_RULES = {
     med: { name: "ซื้อยาเวชภัณฑ์และยาประจำตู้ยา", limitPerRequest: 1000, limitPerMonth: Infinity, code: "51020101", label: "ยาและเวชภัณฑ์" },
     stationery: { name: "วัสดุสิ้นเปลือง - เครื่องใช้สำนักงาน", limitPerRequest: Infinity, limitPerMonth: { group1: 3000, group2: 4000, group3: 5000 }, code: "51090902", label: "วัสดุสำนักงาน" },
@@ -20,71 +44,260 @@ const BUDGET_RULES = {
 let appState = {
     settings: {
         group: "group2",
-        monthlyBudget: 30000
+        monthlyBudget: 30000,
+        customLimits: {}
     },
     documents: [],
     inventory: []
 };
 
-// โหลดข้อมูลเริ่มต้นของแอปพลิเคชัน
+let currentUser = null;
+let currentUserProfile = null;
+
+// ----------------------------------------------------
+// จุดเริ่มต้น: ฟัง Auth State
+// ----------------------------------------------------
 document.addEventListener("DOMContentLoaded", () => {
-    initApp();
-    setupEventHandlers();
-    switchTab("dashboard");
+    setupAuthListener();
 });
 
-function initApp() {
-    const savedData = localStorage.getItem("thp_bergmoney_data");
-    if (savedData) {
-        try {
-            const parsed = JSON.parse(savedData);
-            if (parsed.settings) {
-                appState.settings = parsed.settings;
-                if (!appState.settings.customLimits) {
-                    appState.settings.customLimits = {};
-                }
-            }
-            if (parsed.documents) appState.documents = parsed.documents;
-            if (parsed.inventory) appState.inventory = parsed.inventory;
-        } catch (e) {
-            console.error("Error loading localStorage data", e);
+function setupAuthListener() {
+    // ปุ่ม Google Sign-In
+    document.getElementById("googleSignInBtn").addEventListener("click", handleGoogleSignIn);
+    // ปุ่ม Logout (หน้ารอการอนุมัติ)
+    document.getElementById("pendingLogoutBtn").addEventListener("click", handleLogout);
+
+    // ฟัง Auth State เปลี่ยนแปลง
+    onAuthChange(async (user) => {
+        if (user) {
+            await handleUserSignIn(user);
+        } else {
+            showAuthScreen();
         }
-    } else {
-        // จำลองข้อมูลเพื่อความสวยงามในครั้งแรก
-        appState.documents = [
-            {
-                id: "DOC-20260601",
-                docNumber: "85/2566",
-                docDate: "2026-06-01",
-                officeName: "ที่ทำการไปรษณีย์มาบตาพุด",
-                officePhone: "088-987-8635",
-                itemCategory: "stationery",
-                hasQuotation: "true",
-                items: [
-                    { name: "กระดาษ A4 Double A 80g", lastDate: "2026-05-12", lastQty: 10, lastPrice: 135, qty: 10, price: 135 }
-                ],
-                total: 1350,
-                requesterName: "นายนิพล ทรัพย์หมื่นแสน",
-                requesterPosition: "หน.ปณ.มาบตาพุด"
-            }
-        ];
-        
-        appState.inventory = [
-            {
-                id: "INV-001",
-                date: "2026-06-02",
-                name: "กระดาษ A4 Double A 80g",
-                ref: "บสค.60 เลขที่ 85/2566",
-                action: "receive",
-                qty: 10,
-                balance: 10,
-                receiver: "นายสมชาย ใจดี",
-                inspectors: "คณะกรรมการจัดซื้อ ปณ.มาบตาพุด",
-                auditor: "นายนิพล ทรัพย์หมื่นแสน"
-            }
-        ];
-        saveDataToStorage();
+    });
+}
+
+async function handleGoogleSignIn() {
+    const errorEl = document.getElementById("authError");
+    const loadingEl = document.getElementById("authLoading");
+    const btnEl = document.getElementById("googleSignInBtn");
+
+    errorEl.style.display = "none";
+    loadingEl.style.display = "block";
+    btnEl.disabled = true;
+    btnEl.style.opacity = "0.6";
+
+    try {
+        await loginWithGoogle();
+        // onAuthStateChanged จะจัดการต่อ
+    } catch (error) {
+        loadingEl.style.display = "none";
+        btnEl.disabled = false;
+        btnEl.style.opacity = "1";
+
+        if (error.code === "auth/popup-closed-by-user") {
+            // ผู้ใช้ปิด popup เอง - ไม่ต้องแสดง error
+            return;
+        }
+        errorEl.style.display = "block";
+        errorEl.innerText = "เกิดข้อผิดพลาด: " + (error.message || "ไม่ทราบสาเหตุ");
     }
+}
+
+async function handleLogout() {
+    try {
+        await logout();
+        currentUser = null;
+        currentUserProfile = null;
+        showAuthScreen();
+    } catch (error) {
+        console.error("Logout error:", error);
+    }
+}
+
+async function handleUserSignIn(user) {
+    try {
+        let userProfile = await getUser(user.uid);
+
+        if (!userProfile) {
+            // ผู้ใช้ใหม่ - ตรวจสอบว่าเป็นคนแรกหรือไม่
+            const allUsers = await getAllUsers();
+            const isFirstUser = allUsers.length === 0;
+
+            const newProfile = {
+                displayName: user.displayName || "ไม่ระบุชื่อ",
+                email: user.email || "",
+                photoURL: user.photoURL || "",
+                role: isFirstUser ? "admin" : "user",
+                approved: isFirstUser ? true : false,
+                createdAt: getServerTimestamp(),
+                lastLoginAt: getServerTimestamp()
+            };
+
+            await createOrUpdateUser(user.uid, newProfile);
+            userProfile = { id: user.uid, ...newProfile, role: newProfile.role, approved: newProfile.approved };
+        } else {
+            // อัปเดตเวลาเข้าใช้ล่าสุด
+            await createOrUpdateUser(user.uid, {
+                lastLoginAt: getServerTimestamp(),
+                displayName: user.displayName || userProfile.displayName,
+                photoURL: user.photoURL || userProfile.photoURL
+            });
+        }
+
+        // ตรวจสอบการอนุมัติ
+        if (!userProfile.approved) {
+            showPendingScreen(user);
+            return;
+        }
+
+        currentUser = user;
+        currentUserProfile = userProfile;
+
+        // ตรวจสอบข้อมูลเก่าใน localStorage สำหรับ Migration
+        await checkAndMigrateLocalData();
+
+        // ซ่อนหน้าจอ auth, แสดงแอปหลัก
+        hideAuthScreen();
+        hidePendingScreen();
+        showMainApp();
+
+        await initApp();
+        setupEventHandlers();
+        updateUserUI();
+        switchTab("dashboard");
+
+    } catch (error) {
+        console.error("Error during sign-in flow:", error);
+        alert("เกิดข้อผิดพลาดในการโหลดข้อมูล: " + error.message);
+    }
+}
+
+// ตรวจสอบและย้ายข้อมูลจาก localStorage (ครั้งเดียว)
+async function checkAndMigrateLocalData() {
+    const migrated = localStorage.getItem("thp_bergmoney_migrated");
+    if (migrated) return;
+
+    const savedData = localStorage.getItem("thp_bergmoney_data");
+    if (!savedData) {
+        localStorage.setItem("thp_bergmoney_migrated", "true");
+        return;
+    }
+
+    try {
+        const parsed = JSON.parse(savedData);
+        const hasFirestoreData = await checkIfDataExists();
+
+        if (!hasFirestoreData && (parsed.documents?.length > 0 || parsed.inventory?.length > 0)) {
+            const confirmMigrate = confirm(
+                "พบข้อมูลเดิมในเครื่อง (localStorage)\n" +
+                `- เอกสาร: ${parsed.documents?.length || 0} รายการ\n` +
+                `- พัสดุ: ${parsed.inventory?.length || 0} รายการ\n\n` +
+                "ต้องการย้ายข้อมูลไปยัง Cloud (Firebase) หรือไม่?"
+            );
+
+            if (confirmMigrate) {
+                await migrateLocalStorageToFirestore(parsed);
+                alert("ย้ายข้อมูลไปยัง Cloud เรียบร้อย!");
+            }
+        }
+
+        localStorage.setItem("thp_bergmoney_migrated", "true");
+    } catch (e) {
+        console.error("Migration error:", e);
+    }
+}
+
+// ----------------------------------------------------
+// การแสดง/ซ่อนหน้าจอ
+// ----------------------------------------------------
+function showAuthScreen() {
+    document.getElementById("authScreen").classList.remove("hidden");
+    document.getElementById("pendingScreen").classList.add("hidden");
+    document.getElementById("appWrapper").classList.remove("visible");
+
+    // รีเซ็ตปุ่ม
+    const btnEl = document.getElementById("googleSignInBtn");
+    const loadingEl = document.getElementById("authLoading");
+    btnEl.disabled = false;
+    btnEl.style.opacity = "1";
+    loadingEl.style.display = "none";
+}
+
+function hideAuthScreen() {
+    document.getElementById("authScreen").classList.add("hidden");
+}
+
+function showPendingScreen(user) {
+    document.getElementById("authScreen").classList.add("hidden");
+    document.getElementById("pendingScreen").classList.remove("hidden");
+    document.getElementById("appWrapper").classList.remove("visible");
+    document.getElementById("pendingUserEmail").innerText = user.email || "";
+}
+
+function hidePendingScreen() {
+    document.getElementById("pendingScreen").classList.add("hidden");
+}
+
+function showMainApp() {
+    document.getElementById("appWrapper").classList.add("visible");
+}
+
+// อัปเดต UI ข้อมูลผู้ใช้ (sidebar, header, account settings)
+function updateUserUI() {
+    if (!currentUser || !currentUserProfile) return;
+
+    const photoURL = currentUser.photoURL || "";
+    const displayName = currentUser.displayName || "ไม่ระบุชื่อ";
+    const email = currentUser.email || "";
+    const role = currentUserProfile.role || "user";
+    const roleTh = role === "admin" ? "ผู้ดูแลระบบ" : "ผู้ใช้งาน";
+
+    // Header
+    document.getElementById("headerUserAvatar").src = photoURL;
+    document.getElementById("headerUserName").innerText = displayName;
+
+    // Sidebar
+    document.getElementById("sidebarAvatar").src = photoURL;
+    document.getElementById("sidebarUserName").innerText = displayName;
+    document.getElementById("sidebarUserRole").innerText = roleTh;
+
+    // Account Settings
+    document.getElementById("accountAvatar").src = photoURL;
+    document.getElementById("accountName").innerText = displayName;
+    document.getElementById("accountEmail").innerText = email;
+
+    const roleEl = document.getElementById("accountRole");
+    roleEl.innerText = roleTh;
+    roleEl.className = `role-badge ${role}`;
+
+    // แสดง/ซ่อนเมนูจัดการผู้ใช้ (Admin เท่านั้น)
+    const userMgmtMenu = document.getElementById("menuUserMgmt");
+    if (role === "admin") {
+        userMgmtMenu.style.display = "flex";
+    } else {
+        userMgmtMenu.style.display = "none";
+    }
+}
+
+// ----------------------------------------------------
+// โหลดข้อมูลเริ่มต้น (จาก Firestore)
+// ----------------------------------------------------
+async function initApp() {
+    // โหลด Settings จาก Firestore
+    const settings = await fsLoadSettings();
+    if (settings) {
+        appState.settings = settings;
+        if (!appState.settings.customLimits) {
+            appState.settings.customLimits = {};
+        }
+    }
+
+    // โหลด Documents จาก Firestore
+    appState.documents = await fsGetDocuments();
+
+    // โหลด Inventory จาก Firestore
+    appState.inventory = await fsGetInventory();
 
     // กำหนดวันที่เริ่มต้น
     const docDateInput = document.getElementById("docDate");
@@ -94,29 +307,30 @@ function initApp() {
     if (invDateInput) invDateInput.value = new Date().toISOString().substring(0, 10);
 
     renderMonthSelectOptions();
-    
+
     // ตั้งค่าฟอร์มการตั้งค่าตั้งต้น
     const setGroupInput = document.getElementById("setGroupName");
     if (setGroupInput) setGroupInput.value = appState.settings.group;
-    
+
     const setMonthlyBudgetInput = document.getElementById("setMonthlyBudget");
     if (setMonthlyBudgetInput) setMonthlyBudgetInput.value = appState.settings.monthlyBudget;
-    
+
     renderLimitsSettingsTable();
     updateUIElements();
-    
+
     // เชื่อมฟังก์ชัน Auto-suggest ช่องแรกเริ่มต้น
     bindAutoSuggest(document.querySelector("#formTableBody tr"));
-}
-
-function saveDataToStorage() {
-    localStorage.setItem("thp_bergmoney_data", JSON.stringify(appState));
 }
 
 // ----------------------------------------------------
 // ระบบผูก Event และ Action
 // ----------------------------------------------------
+let eventHandlersSet = false;
+
 function setupEventHandlers() {
+    if (eventHandlersSet) return;
+    eventHandlersSet = true;
+
     // การสลับแท็บ Sidebar
     document.querySelectorAll("aside .menu-item").forEach(item => {
         item.addEventListener("click", (e) => {
@@ -136,7 +350,7 @@ function setupEventHandlers() {
     // เหตุการณ์แบบฟอร์มคำขออนุมัติ
     const bskForm = document.getElementById("bskForm");
     bskForm.addEventListener("submit", handleBskSubmit);
-    
+
     document.getElementById("addItemBtn").addEventListener("click", addFormItemRow);
     document.getElementById("itemCategory").addEventListener("change", checkQuotaLimits);
     document.getElementById("formTableBody").addEventListener("input", handleTableInput);
@@ -157,6 +371,9 @@ function setupEventHandlers() {
 
     document.getElementById("reportMonthSelect").addEventListener("change", renderMonthlyReportTable);
     document.getElementById("printReportBtn").addEventListener("click", printMonthlyReport);
+
+    // ปุ่ม Logout (หน้า Account Settings)
+    document.getElementById("logoutBtn").addEventListener("click", handleLogout);
 }
 
 function switchTab(tabId) {
@@ -173,7 +390,9 @@ function switchTab(tabId) {
         "history": "ประวัติคำขอจัดซื้อจัดจ้าง บสค. 60",
         "inventory": "บัญชีควบคุมพัสดุคลังพัสดุ (แบบที่ 2)",
         "monthly-report": "สรุปรายการซื้อและการจ้างประจำเดือน (แบบที่ 3)",
-        "settings": "ตั้งค่าข้อมูลที่ทำการไปรษณีย์และรหัสหน่วยงาน"
+        "settings": "ตั้งค่าข้อมูลที่ทำการไปรษณีย์และรหัสหน่วยงาน",
+        "user-management": "จัดการผู้ใช้งานระบบ",
+        "account-settings": "บัญชีผู้ใช้งาน"
     };
     document.getElementById("pageTitleText").innerText = titles[tabId] || "ระบบเบิกเงิน";
 
@@ -185,6 +404,10 @@ function switchTab(tabId) {
         renderInventoryTable();
     } else if (tabId === "monthly-report") {
         renderMonthlyReportTable();
+    } else if (tabId === "user-management") {
+        renderUserManagementTable();
+    } else if (tabId === "account-settings") {
+        updateUserUI();
     }
 }
 
@@ -208,7 +431,7 @@ function bindAutoSuggest(row) {
 function showSuggestions(input, boxElement) {
     const val = input.value.trim().toLowerCase();
     boxElement.innerHTML = "";
-    
+
     const itemsHistory = [];
     const seen = new Set();
 
@@ -262,7 +485,7 @@ function showSuggestions(input, boxElement) {
             row.querySelector(".item-last-date").value = item.lastDate;
             row.querySelector(".item-last-qty").value = item.lastQty;
             row.querySelector(".item-last-price").value = item.lastPrice || 0;
-            
+
             boxElement.style.display = "none";
             calculateFormTotal();
         });
@@ -285,7 +508,7 @@ function handleTableInput(e) {
 function calculateFormTotal() {
     const rows = document.querySelectorAll("#formTableBody tr");
     let total = 0;
-    
+
     rows.forEach(row => {
         const qty = parseFloat(row.querySelector(".item-qty").value) || 0;
         const price = parseFloat(row.querySelector(".item-price").value) || 0;
@@ -294,7 +517,7 @@ function calculateFormTotal() {
 
     document.getElementById("formTotalDisplay").innerText = `${total.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿`;
     document.getElementById("thaiBahtText").innerText = `(${arabicToThaiBaht(total)})`;
-    
+
     checkQuotaLimits();
 }
 
@@ -339,7 +562,7 @@ function checkQuotaLimits() {
 
     const warningBanner = document.getElementById("quotaWarning");
     const saveDocBtn = document.getElementById("saveDocBtn");
-    
+
     if (isOverLimit) {
         warningBanner.style.display = "flex";
         document.getElementById("warningMessage").innerText = message;
@@ -379,10 +602,10 @@ function addFormItemRow() {
         </tr>
     `;
     tbody.insertAdjacentHTML("beforeend", newRow);
-    
+
     const rows = tbody.querySelectorAll("tr");
     const latestRow = rows[rows.length - 1];
-    
+
     latestRow.querySelector(".remove-row-btn").addEventListener("click", (e) => {
         e.currentTarget.closest("tr").remove();
         reindexFormTable();
@@ -401,18 +624,18 @@ function reindexFormTable() {
 }
 
 // ----------------------------------------------------
-// ระบบบันทึก บสค. 60 และคลังพัสดุ
+// ระบบบันทึก บสค. 60 (Firestore)
 // ----------------------------------------------------
-function handleBskSubmit(e) {
+async function handleBskSubmit(e) {
     e.preventDefault();
-    
+
     const category = document.getElementById("itemCategory").value;
     const docDate = document.getElementById("docDate").value;
     const officeName = document.getElementById("officeName").value;
     const officePhone = document.getElementById("officePhone").value;
     const docNumber = document.getElementById("docNumber").value;
     const hasQuotation = document.querySelector('input[name="hasQuotation"]:checked').value;
-    
+
     const items = [];
     let total = 0;
     const rows = document.querySelectorAll("#formTableBody tr");
@@ -423,7 +646,7 @@ function handleBskSubmit(e) {
         const lastPrice = row.querySelector(".item-last-price").value;
         const qty = parseFloat(row.querySelector(".item-qty").value) || 1;
         const price = parseFloat(row.querySelector(".item-price").value) || 0;
-        
+
         items.push({ name, lastDate, lastQty, lastPrice, qty, price });
         total += qty * price;
     });
@@ -432,7 +655,6 @@ function handleBskSubmit(e) {
     const requesterPosition = document.getElementById("requesterPosition").value;
 
     const newDoc = {
-        id: "DOC-" + Date.now(),
         docNumber,
         docDate,
         officeName,
@@ -442,39 +664,54 @@ function handleBskSubmit(e) {
         items,
         total,
         requesterName,
-        requesterPosition
+        requesterPosition,
+        createdBy: currentUser ? currentUser.email : "",
+        createdAt: getServerTimestamp()
     };
 
-    appState.documents.push(newDoc);
-    saveDataToStorage();
+    try {
+        // บันทึกลง Firestore
+        const firestoreId = await fsAddDocument(newDoc);
+        newDoc.id = firestoreId;
 
-    alert("บันทึกข้อมูลคำขอจัดซื้อจัดจ้าง บสค. 60 เรียบร้อย!");
-    
-    document.getElementById("bskForm").reset();
-    document.getElementById("formTableBody").innerHTML = `
-        <tr>
-            <td style="text-align: center;">1</td>
-            <td class="suggest-wrapper">
-                <input type="text" class="item-name" placeholder="ระบุรายละเอียดสิ่งของ (พิมพ์เพื่อค้นหาประวัติ)" required style="width: 100%;">
-                <div class="suggest-box"></div>
-            </td>
-            <td><input type="date" class="item-last-date" style="width: 100%;"></td>
-            <td><input type="number" class="item-last-qty" placeholder="จำนวน" style="width: 100%; text-align: center;"></td>
-            <td><input type="number" class="item-last-price" placeholder="0.00" min="0" step="0.01" style="width: 100%; text-align: right;"></td>
-            <td><input type="number" class="item-qty" value="1" min="1" required style="width: 100%; text-align: center;"></td>
-            <td><input type="number" class="item-price" placeholder="0.00" min="0" step="0.01" required style="width: 100%; text-align: right;"></td>
-            <td>
-                <button type="button" class="btn-icon-only remove-row-btn" style="margin: auto;">
-                    <span class="material-symbols-outlined">delete</span>
-                </button>
-            </td>
-        </tr>
-    `;
-    bindAutoSuggest(document.querySelector("#formTableBody tr"));
-    calculateFormTotal();
-    switchTab("history");
+        // อัปเดต state ในเครื่อง
+        appState.documents.unshift(newDoc);
+
+        alert("บันทึกข้อมูลคำขอจัดซื้อจัดจ้าง บสค. 60 เรียบร้อย!");
+
+        // รีเซ็ตฟอร์ม
+        document.getElementById("bskForm").reset();
+        document.getElementById("formTableBody").innerHTML = `
+            <tr>
+                <td style="text-align: center;">1</td>
+                <td class="suggest-wrapper">
+                    <input type="text" class="item-name" placeholder="ระบุรายละเอียดสิ่งของ (พิมพ์เพื่อค้นหาประวัติ)" required style="width: 100%;">
+                    <div class="suggest-box"></div>
+                </td>
+                <td><input type="date" class="item-last-date" style="width: 100%;"></td>
+                <td><input type="number" class="item-last-qty" placeholder="จำนวน" style="width: 100%; text-align: center;"></td>
+                <td><input type="number" class="item-last-price" placeholder="0.00" min="0" step="0.01" style="width: 100%; text-align: right;"></td>
+                <td><input type="number" class="item-qty" value="1" min="1" required style="width: 100%; text-align: center;"></td>
+                <td><input type="number" class="item-price" placeholder="0.00" min="0" step="0.01" required style="width: 100%; text-align: right;"></td>
+                <td>
+                    <button type="button" class="btn-icon-only remove-row-btn" style="margin: auto;">
+                        <span class="material-symbols-outlined">delete</span>
+                    </button>
+                </td>
+            </tr>
+        `;
+        bindAutoSuggest(document.querySelector("#formTableBody tr"));
+        calculateFormTotal();
+        switchTab("history");
+    } catch (error) {
+        console.error("Error saving document:", error);
+        alert("เกิดข้อผิดพลาดในการบันทึก: " + error.message);
+    }
 }
 
+// ----------------------------------------------------
+// คลังพัสดุ (Firestore)
+// ----------------------------------------------------
 function renderInventoryTable() {
     const tbody = document.getElementById("inventoryTableBody");
     tbody.innerHTML = "";
@@ -500,7 +737,7 @@ function renderInventoryTable() {
                 <td>${inv.inspectors || "-"}</td>
                 <td>${inv.auditor || "-"}</td>
                 <td>
-                    <button class="btn-icon-only" style="width:28px; height:28px; margin:auto;" onclick="deleteInventoryItem('${inv.id}')">
+                    <button class="btn-icon-only" style="width:28px; height:28px; margin:auto;" onclick="window._deleteInventoryItem('${inv.id}')">
                         <span class="material-symbols-outlined" style="font-size:16px;">delete</span>
                     </button>
                 </td>
@@ -510,7 +747,7 @@ function renderInventoryTable() {
     });
 }
 
-function handleInventorySubmit(e) {
+async function handleInventorySubmit(e) {
     e.preventDefault();
 
     const date = document.getElementById("invDate").value;
@@ -540,7 +777,6 @@ function handleInventorySubmit(e) {
     }
 
     const newInvItem = {
-        id: "INV-" + Date.now(),
         date,
         name,
         ref,
@@ -549,27 +785,40 @@ function handleInventorySubmit(e) {
         balance: newBalance,
         receiver,
         inspectors,
-        auditor
+        auditor,
+        createdBy: currentUser ? currentUser.email : "",
+        createdAt: getServerTimestamp()
     };
 
-    appState.inventory.push(newInvItem);
-    saveDataToStorage();
+    try {
+        const firestoreId = await fsAddInventoryItem(newInvItem);
+        newInvItem.id = firestoreId;
+        appState.inventory.push(newInvItem);
 
-    closeModal("inventoryModal");
-    document.getElementById("inventoryForm").reset();
-    renderInventoryTable();
+        closeModal("inventoryModal");
+        document.getElementById("inventoryForm").reset();
+        renderInventoryTable();
+    } catch (error) {
+        console.error("Error saving inventory:", error);
+        alert("เกิดข้อผิดพลาดในการบันทึก: " + error.message);
+    }
 }
 
-function deleteInventoryItem(itemId) {
+async function deleteInventoryItem(itemId) {
     if (confirm("ต้องการลบพัสดุคลังรายการนี้?")) {
-        appState.inventory = appState.inventory.filter(item => item.id !== itemId);
-        saveDataToStorage();
-        renderInventoryTable();
+        try {
+            await fsDeleteInventoryItem(itemId);
+            appState.inventory = appState.inventory.filter(item => item.id !== itemId);
+            renderInventoryTable();
+        } catch (error) {
+            console.error("Error deleting inventory:", error);
+            alert("เกิดข้อผิดพลาดในการลบ: " + error.message);
+        }
     }
 }
 
 // ----------------------------------------------------
-// รายงานสรุปผลสถิติและประวัติขออนุมัติ
+// ประวัติเอกสาร (Firestore)
 // ----------------------------------------------------
 function renderHistoryTable() {
     const tbody = document.getElementById("historyTableBody");
@@ -583,8 +832,8 @@ function renderHistoryTable() {
     appState.documents.forEach(doc => {
         const cat = BUDGET_RULES[doc.itemCategory];
         const dateFormatted = new Date(doc.docDate).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" });
-        const quotationBadge = doc.hasQuotation === "true" 
-            ? `<span style="background-color:rgba(16,185,129,0.15); color:var(--success); padding:3px 8px; border-radius:12px; font-size:0.75rem; font-weight:600;">มี</span>`
+        const quotationBadge = doc.hasQuotation === "true"
+            ? `<span style="background-color:rgba(16,185,129,0.15); color:#10B981; padding:3px 8px; border-radius:12px; font-size:0.75rem; font-weight:600;">มี</span>`
             : `<span style="background-color:rgba(239,68,68,0.15); color:#EF4444; padding:3px 8px; border-radius:12px; font-size:0.75rem; font-weight:600;">ไม่มี</span>`;
 
         const row = `
@@ -597,10 +846,10 @@ function renderHistoryTable() {
                 <td>${doc.requesterName}</td>
                 <td>
                     <div style="display:flex; gap:0.5rem; justify-content:center;">
-                        <button class="btn btn-secondary" style="padding: 4px 10px; font-size:0.8rem;" onclick="printDocument('${doc.id}')">
+                        <button class="btn btn-secondary" style="padding: 4px 10px; font-size:0.8rem;" onclick="window._printDocument('${doc.id}')">
                             <span class="material-symbols-outlined" style="font-size:16px;">print</span> พิมพ์
                         </button>
-                        <button class="btn btn-danger" style="padding: 4px 10px; font-size:0.8rem;" onclick="deleteDocument('${doc.id}')">
+                        <button class="btn btn-danger" style="padding: 4px 10px; font-size:0.8rem;" onclick="window._deleteDocument('${doc.id}')">
                             <span class="material-symbols-outlined" style="font-size:16px;">delete</span> ลบ
                         </button>
                     </div>
@@ -611,14 +860,22 @@ function renderHistoryTable() {
     });
 }
 
-function deleteDocument(docId) {
+async function deleteDocument(docId) {
     if (confirm("ลบประวัติใบขออนุมัตินี้ออกจากฐานข้อมูล?")) {
-        appState.documents = appState.documents.filter(doc => doc.id !== docId);
-        saveDataToStorage();
-        renderHistoryTable();
+        try {
+            await fsDeleteDocument(docId);
+            appState.documents = appState.documents.filter(doc => doc.id !== docId);
+            renderHistoryTable();
+        } catch (error) {
+            console.error("Error deleting document:", error);
+            alert("เกิดข้อผิดพลาดในการลบ: " + error.message);
+        }
     }
 }
 
+// ----------------------------------------------------
+// รายงานประจำเดือน
+// ----------------------------------------------------
 function renderMonthSelectOptions() {
     const select = document.getElementById("reportMonthSelect");
     select.innerHTML = "";
@@ -656,7 +913,7 @@ function renderMonthlyReportTable() {
     let itemIndex = 1;
     monthlyDocs.forEach(doc => {
         const cat = BUDGET_RULES[doc.itemCategory];
-        
+
         doc.items.forEach(item => {
             const itemTotal = item.qty * item.price;
             grandTotal += itemTotal;
@@ -724,8 +981,6 @@ function printDocument(docId) {
     });
     categoryCheckboxesHtml += `</div>`;
 
-    // ตารางแสดงเฉพาะรายการที่มีข้อมูลจริงโดยไม่เผื่อแถวว่างเพิ่มเติมตามที่ผู้ใช้ร้องขอ
-
     printSection.innerHTML = `
         <div class="print-header" style="position: relative; display: flex; align-items: center; justify-content: center; height: 50px;">
             <img src="thailand-post-logo.png" alt="ไปรษณีย์ไทย" class="print-logo" style="height: 38px; object-fit: contain; position: absolute; left: 0; bottom: 6px;">
@@ -751,7 +1006,7 @@ function printDocument(docId) {
                 <td colspan="3" style="padding-top: 6px;">ฝปข.2</td>
             </tr>
         </table>
-        
+
         <p style="text-indent: 1.5cm; margin-bottom: 6px; font-size: 12pt; line-height: 1.3;">
             ด้วย <b>ปณ.มาบตาพุด</b> มีความจำเป็นต้องการจัดซื้อและจัดจ้างพัสดุบางประเภท (ที่มอบอำนาจการซื้อและการจ้างตามคำสั่ง ปณท ที่ 4/2566) ดังนี้:
         </p>
@@ -855,7 +1110,7 @@ function printMonthlyReport() {
         <div style="text-align: center; margin-bottom: 15px; font-size: 15pt;">
             ที่ทำการ: <b>ที่ทำการไปรษณีย์มาบตาพุด</b> &nbsp;&nbsp;&nbsp; ประจำเดือน <b>${thaiMonthText}</b>
         </div>
-        
+
         <table class="item-table" style="font-size: 13pt;">
             <thead>
                 <tr>
@@ -902,11 +1157,19 @@ window.closeModal = function(modalId) {
     document.getElementById(modalId).classList.remove("active");
 };
 
-function handleSettingsSubmit(e) {
+// Expose to global scope สำหรับ inline onclick ใน dynamic HTML
+window._printDocument = printDocument;
+window._deleteDocument = deleteDocument;
+window._deleteInventoryItem = deleteInventoryItem;
+
+// Alias เดิมสำหรับ static HTML (onclick="closeModal(...)") 
+// openModal/closeModal ถูกกำหนดด้านบนแล้ว
+
+async function handleSettingsSubmit(e) {
     e.preventDefault();
     appState.settings.group = document.getElementById("setGroupName").value;
     appState.settings.monthlyBudget = parseFloat(document.getElementById("setMonthlyBudget").value) || 0;
-    
+
     // บันทึกเพดานวงเงินรายหมวดหมู่
     const customLimits = {};
     document.querySelectorAll("#limitsSettingsTableBody .limit-req-input").forEach(input => {
@@ -917,7 +1180,7 @@ function handleSettingsSubmit(e) {
             customLimits[cat].limitPerRequest = parseFloat(val);
         }
     });
-    
+
     document.querySelectorAll("#limitsSettingsTableBody .limit-month-input").forEach(input => {
         const cat = input.getAttribute("data-category");
         const val = input.value.trim();
@@ -926,13 +1189,17 @@ function handleSettingsSubmit(e) {
             customLimits[cat].limitPerMonth = parseFloat(val);
         }
     });
-    
+
     appState.settings.customLimits = customLimits;
-    
-    saveDataToStorage();
-    alert("บันทึกการตั้งค่าระบบเรียบร้อยแล้ว!");
-    
-    // อัปเดตข้อมูล UI และแดชบอร์ดตามค่าวงเงินใหม่
+
+    try {
+        await fsSaveSettings(appState.settings);
+        alert("บันทึกการตั้งค่าระบบเรียบร้อยแล้ว!");
+    } catch (error) {
+        console.error("Error saving settings:", error);
+        alert("เกิดข้อผิดพลาดในการบันทึก: " + error.message);
+    }
+
     renderLimitsSettingsTable();
     updateUIElements();
     switchTab("dashboard");
@@ -942,10 +1209,10 @@ function updateUIElements() {
     const currentMonthStr = new Date().toISOString().substring(0, 7);
     const currentMonthDocs = appState.documents.filter(doc => doc.docDate.startsWith(currentMonthStr));
     const totalSpentThisMonth = currentMonthDocs.reduce((sum, doc) => sum + doc.total, 0);
-    
+
     document.getElementById("statCount").innerText = `${currentMonthDocs.length} รายการ`;
     document.getElementById("statTotal").innerText = `${totalSpentThisMonth.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿`;
-    
+
     const remainingOfficeBudget = appState.settings.monthlyBudget - totalSpentThisMonth;
     const statBudgetElement = document.getElementById("statBudget");
     statBudgetElement.innerText = `${remainingOfficeBudget.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿`;
@@ -984,7 +1251,7 @@ function renderBudgetQuotaTable(currentMonthStr) {
 
         const remaining = (monthlyLimit !== undefined && monthlyLimit !== Infinity) ? (monthlyLimit - spentThisMonth) : Infinity;
         let remainingText = remaining === Infinity ? "ไม่จำกัดงบรายเดือน" : `${remaining.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿`;
-        
+
         let statusBadge = `<span style="color:#10B981; font-weight:600;">พร้อมใช้งาน</span>`;
         if (remaining <= 0 && remaining !== Infinity) {
             statusBadge = `<span style="color:#EF4444; font-weight:600;">เต็มวงเงินแล้ว</span>`;
@@ -1014,20 +1281,27 @@ function exportBackupData() {
     dlAnchorElem.click();
 }
 
-function importBackupData(e) {
+async function importBackupData(e) {
     const fileReader = new FileReader();
-    fileReader.onload = function (event) {
+    fileReader.onload = async function (event) {
         try {
             const parsed = JSON.parse(event.target.result);
             if (parsed.documents || parsed.inventory || parsed.settings) {
-                appState = {
-                    settings: parsed.settings || appState.settings,
-                    documents: parsed.documents || [],
-                    inventory: parsed.inventory || []
-                };
-                saveDataToStorage();
+                const confirmImport = confirm(
+                    "นำเข้าข้อมูลจะแทนที่ข้อมูลปัจจุบันบนระบบ Cloud\nดำเนินการต่อหรือไม่?"
+                );
+                if (!confirmImport) return;
+
+                await migrateLocalStorageToFirestore(parsed);
+
+                // โหลดข้อมูลใหม่จาก Firestore
+                appState.documents = await fsGetDocuments();
+                appState.inventory = await fsGetInventory();
+                const settings = await fsLoadSettings();
+                if (settings) appState.settings = settings;
+
                 alert("นำเข้าข้อมูลสำรองเข้าระบบแล้ว!");
-                initApp();
+                updateUIElements();
             } else {
                 alert("รูปแบบไฟล์สะสมไม่ถูกต้อง");
             }
@@ -1038,11 +1312,135 @@ function importBackupData(e) {
     fileReader.readAsText(e.target.files[0]);
 }
 
+// ----------------------------------------------------
+// User Management (Admin Only)
+// ----------------------------------------------------
+async function renderUserManagementTable() {
+    const tbody = document.getElementById("userManagementTableBody");
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-secondary);"><span class="spinner" style="display:inline-block; width:16px; height:16px; border:2px solid #E2E8F0; border-top-color:var(--thp-red); border-radius:50%; animation:spin 0.8s linear infinite; vertical-align:middle; margin-right:0.5rem;"></span> กำลังโหลด...</td></tr>`;
+
+    try {
+        const users = await getAllUsers();
+        tbody.innerHTML = "";
+
+        if (users.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-secondary);">ไม่มีผู้ใช้ในระบบ</td></tr>`;
+            return;
+        }
+
+        users.forEach(user => {
+            const roleTh = user.role === "admin" ? "ผู้ดูแลระบบ" : "ผู้ใช้งาน";
+            const roleBadgeClass = user.role === "admin" ? "admin" : "user";
+            const statusTh = user.approved ? "อนุมัติแล้ว" : "รออนุมัติ";
+            const statusBadgeClass = user.approved ? "approved" : "pending";
+
+            let lastLoginText = "-";
+            if (user.lastLoginAt) {
+                try {
+                    const d = user.lastLoginAt.toDate ? user.lastLoginAt.toDate() : new Date(user.lastLoginAt);
+                    lastLoginText = d.toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit", hour: "2-digit", minute: "2-digit" });
+                } catch (e) {
+                    lastLoginText = "-";
+                }
+            }
+
+            const isSelf = currentUser && user.id === currentUser.uid;
+
+            let actionsHtml = "";
+            if (isSelf) {
+                actionsHtml = `<span style="color:var(--text-secondary); font-size:0.8rem;">ตัวคุณเอง</span>`;
+            } else {
+                if (!user.approved) {
+                    actionsHtml += `<button class="btn btn-success" style="padding:3px 8px; font-size:0.75rem;" onclick="window._approveUser('${user.id}')"><span class="material-symbols-outlined" style="font-size:14px;">check</span> อนุมัติ</button> `;
+                } else {
+                    actionsHtml += `<button class="btn btn-secondary" style="padding:3px 8px; font-size:0.75rem;" onclick="window._rejectUser('${user.id}')"><span class="material-symbols-outlined" style="font-size:14px;">block</span> ระงับ</button> `;
+                }
+
+                const toggleRole = user.role === "admin" ? "user" : "admin";
+                const toggleRoleTh = user.role === "admin" ? "ลดเป็นผู้ใช้" : "เลื่อนเป็น Admin";
+                actionsHtml += `<button class="btn btn-secondary" style="padding:3px 8px; font-size:0.75rem;" onclick="window._changeUserRole('${user.id}', '${toggleRole}')"><span class="material-symbols-outlined" style="font-size:14px;">swap_horiz</span> ${toggleRoleTh}</button> `;
+                actionsHtml += `<button class="btn btn-danger" style="padding:3px 8px; font-size:0.75rem;" onclick="window._removeUser('${user.id}')"><span class="material-symbols-outlined" style="font-size:14px;">delete</span></button>`;
+            }
+
+            const row = `
+                <tr>
+                    <td><img class="user-avatar" src="${user.photoURL || ''}" alt="" onerror="this.style.display='none'"></td>
+                    <td style="font-weight:600;">${user.displayName || "ไม่ระบุ"}</td>
+                    <td>${user.email || "-"}</td>
+                    <td><span class="role-badge ${roleBadgeClass}">${roleTh}</span></td>
+                    <td><span class="status-badge ${statusBadgeClass}">${statusTh}</span></td>
+                    <td style="font-size:0.8rem;">${lastLoginText}</td>
+                    <td>
+                        <div style="display:flex; gap:0.25rem; justify-content:center; flex-wrap:wrap;">
+                            ${actionsHtml}
+                        </div>
+                    </td>
+                </tr>
+            `;
+            tbody.insertAdjacentHTML("beforeend", row);
+        });
+    } catch (error) {
+        console.error("Error loading users:", error);
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#EF4444;">เกิดข้อผิดพลาด: ${error.message}</td></tr>`;
+    }
+}
+
+// User management actions (exposed globally for inline onclick)
+window._approveUser = async function(uid) {
+    try {
+        await updateUserApproval(uid, true);
+        alert("อนุมัติผู้ใช้เรียบร้อย!");
+        renderUserManagementTable();
+    } catch (error) {
+        alert("เกิดข้อผิดพลาด: " + error.message);
+    }
+};
+
+window._rejectUser = async function(uid) {
+    if (confirm("ต้องการระงับสิทธิ์ผู้ใช้นี้?")) {
+        try {
+            await updateUserApproval(uid, false);
+            alert("ระงับสิทธิ์ผู้ใช้เรียบร้อย");
+            renderUserManagementTable();
+        } catch (error) {
+            alert("เกิดข้อผิดพลาด: " + error.message);
+        }
+    }
+};
+
+window._changeUserRole = async function(uid, newRole) {
+    const roleTh = newRole === "admin" ? "ผู้ดูแลระบบ" : "ผู้ใช้งาน";
+    if (confirm(`เปลี่ยนสิทธิ์เป็น "${roleTh}" ?`)) {
+        try {
+            await updateUserRole(uid, newRole);
+            alert(`เปลี่ยนสิทธิ์เป็น "${roleTh}" เรียบร้อย!`);
+            renderUserManagementTable();
+        } catch (error) {
+            alert("เกิดข้อผิดพลาด: " + error.message);
+        }
+    }
+};
+
+window._removeUser = async function(uid) {
+    if (confirm("ต้องการลบผู้ใช้นี้ออกจากระบบ?\n(การลบจะเอาสิทธิ์การเข้าถึงออก แต่ไม่ลบบัญชี Google)")) {
+        try {
+            await removeUser(uid);
+            alert("ลบผู้ใช้ออกจากระบบเรียบร้อย");
+            renderUserManagementTable();
+        } catch (error) {
+            alert("เกิดข้อผิดพลาด: " + error.message);
+        }
+    }
+};
+
+// ----------------------------------------------------
+// Utility Functions
+// ----------------------------------------------------
 function arabicToThaiBaht(num) {
     if (num === 0) return "ศูนย์บาทถ้วน";
     const textNumber = ["ศูนย์", "หนึ่ง", "สอง", "สาม", "สี่", "ห้า", "หก", "เจ็ด", "แปด", "เก้า"];
     const textDigit = ["", "สิบ", "ร้อย", "พัน", "หมื่น", "แสน", "ล้าน"];
-    
+
     let parts = num.toFixed(2).split(".");
     let integerPart = parts[0];
     let decimalPart = parts[1];
@@ -1113,16 +1511,14 @@ function renderLimitsSettingsTable() {
     const tbody = document.getElementById("limitsSettingsTableBody");
     if (!tbody) return;
     tbody.innerHTML = "";
-    
+
     Object.keys(BUDGET_RULES).forEach(key => {
         const rule = BUDGET_RULES[key];
         const custom = (appState.settings.customLimits && appState.settings.customLimits[key]) ? appState.settings.customLimits[key] : {};
-        
-        // Get limit value or blank string
+
         const reqLimit = custom.limitPerRequest !== undefined ? custom.limitPerRequest : "";
         const monthLimit = custom.limitPerMonth !== undefined ? custom.limitPerMonth : "";
-        
-        // Set placeholder showing default limit
+
         let defaultReqPlaceholder = "";
         if (rule.limitPerRequest) {
             if (typeof rule.limitPerRequest === "object") {
@@ -1135,7 +1531,7 @@ function renderLimitsSettingsTable() {
         } else {
             defaultReqPlaceholder = "ไม่จำกัด";
         }
-        
+
         let defaultMonthPlaceholder = "";
         if (rule.limitPerMonth) {
             if (typeof rule.limitPerMonth === "object") {
@@ -1149,7 +1545,7 @@ function renderLimitsSettingsTable() {
         } else {
             defaultMonthPlaceholder = "ไม่จำกัด";
         }
-        
+
         const row = document.createElement("tr");
         row.style.borderBottom = "1px solid var(--border-color)";
         row.innerHTML = `
