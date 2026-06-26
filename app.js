@@ -729,10 +729,7 @@ function printDocument(docId) {
 
     printSection.innerHTML = `
         <div class="print-header">
-            <svg width="60" height="30" viewBox="0 0 100 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M0 0H100L85 30H15L0 0Z" fill="#E31837"/>
-                <path d="M15 30H85L65 65H5L15 30Z" fill="#1E3A8A"/>
-            </svg>
+            <img src="thailand-post-logo.png" alt="ไปรษณีย์ไทย" class="print-logo" style="height: 45px; object-fit: contain;">
             <div style="font-weight: bold; font-size: 18pt;">บันทึกข้อความ</div>
         </div>
         <table class="memo-table">
@@ -852,10 +849,7 @@ function printMonthlyReport() {
 
     printSection.innerHTML = `
         <div class="print-header">
-            <svg width="60" height="30" viewBox="0 0 100 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M0 0H100L85 30H15L0 0Z" fill="#E31837"/>
-                <path d="M15 30H85L65 65H5L15 30Z" fill="#1E3A8A"/>
-            </svg>
+            <img src="thailand-post-logo.png" alt="ไปรษณีย์ไทย" class="print-logo" style="height: 45px; object-fit: contain;">
             <div style="font-weight: bold; font-size: 16pt;">แบบที่ 3</div>
         </div>
         <h2 style="text-align: center; margin-bottom: 10px;">บัญชีสรุปรายการซื้อและการจ้างประจำเดือน</h2>
