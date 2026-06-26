@@ -38,7 +38,12 @@ function initApp() {
     if (savedData) {
         try {
             const parsed = JSON.parse(savedData);
-            if (parsed.settings) appState.settings = parsed.settings;
+            if (parsed.settings) {
+                appState.settings = parsed.settings;
+                if (!appState.settings.customLimits) {
+                    appState.settings.customLimits = {};
+                }
+            }
             if (parsed.documents) appState.documents = parsed.documents;
             if (parsed.inventory) appState.inventory = parsed.inventory;
         } catch (e) {
@@ -89,6 +94,15 @@ function initApp() {
     if (invDateInput) invDateInput.value = new Date().toISOString().substring(0, 10);
 
     renderMonthSelectOptions();
+    
+    // ตั้งค่าฟอร์มการตั้งค่าตั้งต้น
+    const setGroupInput = document.getElementById("setGroupName");
+    if (setGroupInput) setGroupInput.value = appState.settings.group;
+    
+    const setMonthlyBudgetInput = document.getElementById("setMonthlyBudget");
+    if (setMonthlyBudgetInput) setMonthlyBudgetInput.value = appState.settings.monthlyBudget;
+    
+    renderLimitsSettingsTable();
     updateUIElements();
     
     // เชื่อมฟังก์ชัน Auto-suggest ช่องแรกเริ่มต้น
@@ -296,30 +310,30 @@ function checkQuotaLimits() {
         total += qty * price;
     });
 
-    const rule = BUDGET_RULES[category];
     const group = appState.settings.group;
     let isOverLimit = false;
     let message = "";
 
-    if (rule.limitPerRequest) {
-        if (typeof rule.limitPerRequest === "object") {
+    const limitReq = getLimitPerRequest(category);
+    if (limitReq !== undefined && limitReq !== Infinity) {
+        if (typeof limitReq === "object") {
             message = `กรุณาตรวจสอบว่ายอดจัดซื้อยานพาหนะรายคันไม่เกินวงเงินสูงสุดครั้งละ (รถยนต์ 15,000฿ / จยย. 3,000฿)`;
-        } else if (total > rule.limitPerRequest) {
+        } else if (total > limitReq) {
             isOverLimit = true;
-            message = `การจัดซื้อรายการนี้เกินขีดจำกัดอนุมัติครั้งละ ${rule.limitPerRequest.toLocaleString()} บาทตามคำสั่ง ปณท ที่ 4/2566`;
+            message = `การจัดซื้อรายการนี้เกินขีดจำกัดอนุมัติครั้งละ ${limitReq.toLocaleString()} บาทตามค่ากำหนดวงเงิน`;
         }
     }
 
-    if (rule.limitPerMonth && !isOverLimit) {
-        let monthlyLimit = typeof rule.limitPerMonth === "object" ? rule.limitPerMonth[group] : rule.limitPerMonth;
+    const limitMonth = getLimitPerMonth(category, group);
+    if (limitMonth !== undefined && limitMonth !== Infinity && !isOverLimit) {
         const currentMonthStr = document.getElementById("docDate").value.substring(0, 7);
         const spentThisMonth = appState.documents
             .filter(doc => doc.docDate.startsWith(currentMonthStr) && doc.itemCategory === category)
             .reduce((sum, doc) => sum + doc.total, 0);
 
-        if (spentThisMonth + total > monthlyLimit) {
+        if (spentThisMonth + total > limitMonth) {
             isOverLimit = true;
-            message = `งบรวมสะสมเดือนนี้เท่ากับ ${(spentThisMonth + total).toLocaleString()} บาท ซึ่งเกินวงเงินจำกัดต่อเดือนของสังกัดที่ ${monthlyLimit.toLocaleString()} บาท`;
+            message = `งบรวมสะสมเดือนนี้เท่ากับ ${(spentThisMonth + total).toLocaleString()} บาท ซึ่งเกินวงเงินจำกัดต่อเดือนที่ ${limitMonth.toLocaleString()} บาท`;
         }
     }
 
@@ -892,8 +906,35 @@ function handleSettingsSubmit(e) {
     e.preventDefault();
     appState.settings.group = document.getElementById("setGroupName").value;
     appState.settings.monthlyBudget = parseFloat(document.getElementById("setMonthlyBudget").value) || 0;
+    
+    // บันทึกเพดานวงเงินรายหมวดหมู่
+    const customLimits = {};
+    document.querySelectorAll("#limitsSettingsTableBody .limit-req-input").forEach(input => {
+        const cat = input.getAttribute("data-category");
+        const val = input.value.trim();
+        if (val !== "") {
+            if (!customLimits[cat]) customLimits[cat] = {};
+            customLimits[cat].limitPerRequest = parseFloat(val);
+        }
+    });
+    
+    document.querySelectorAll("#limitsSettingsTableBody .limit-month-input").forEach(input => {
+        const cat = input.getAttribute("data-category");
+        const val = input.value.trim();
+        if (val !== "") {
+            if (!customLimits[cat]) customLimits[cat] = {};
+            customLimits[cat].limitPerMonth = parseFloat(val);
+        }
+    });
+    
+    appState.settings.customLimits = customLimits;
+    
     saveDataToStorage();
-    alert("บันทึกการตั้งค่าแล้ว!");
+    alert("บันทึกการตั้งค่าระบบเรียบร้อยแล้ว!");
+    
+    // อัปเดตข้อมูล UI และแดชบอร์ดตามค่าวงเงินใหม่
+    renderLimitsSettingsTable();
+    updateUIElements();
     switchTab("dashboard");
 }
 
@@ -921,33 +962,27 @@ function renderBudgetQuotaTable(currentMonthStr) {
 
     Object.keys(BUDGET_RULES).forEach(key => {
         const rule = BUDGET_RULES[key];
-        
+        const reqLimit = getLimitPerRequest(key);
         let limitPerRequestText = "-";
-        if (rule.limitPerRequest) {
-            if (typeof rule.limitPerRequest === "object") {
-                limitPerRequestText = `รถ: ${rule.limitPerRequest.car.toLocaleString()}฿ / จยย.: ${rule.limitPerRequest.bike.toLocaleString()}฿`;
+        if (reqLimit !== undefined && reqLimit !== Infinity) {
+            if (typeof reqLimit === "object") {
+                limitPerRequestText = `รถ: ${reqLimit.car.toLocaleString()}฿ / จยย.: ${reqLimit.bike.toLocaleString()}฿`;
             } else {
-                limitPerRequestText = `${rule.limitPerRequest.toLocaleString()} ฿`;
+                limitPerRequestText = `${reqLimit.toLocaleString()} ฿`;
             }
         }
 
-        let monthlyLimit = 0;
+        const monthlyLimit = getLimitPerMonth(key, userGroup);
         let limitPerMonthText = "-";
-        if (rule.limitPerMonth) {
-            if (typeof rule.limitPerMonth === "object") {
-                monthlyLimit = rule.limitPerMonth[userGroup];
-                limitPerMonthText = `${monthlyLimit.toLocaleString()} ฿ (กลุ่ม)`;
-            } else {
-                monthlyLimit = rule.limitPerMonth;
-                limitPerMonthText = `${monthlyLimit.toLocaleString()} ฿`;
-            }
+        if (monthlyLimit !== undefined && monthlyLimit !== Infinity) {
+            limitPerMonthText = `${monthlyLimit.toLocaleString()} ฿`;
         }
 
         const spentThisMonth = appState.documents
             .filter(doc => doc.docDate.startsWith(currentMonthStr) && doc.itemCategory === key)
             .reduce((sum, doc) => sum + doc.total, 0);
 
-        const remaining = monthlyLimit ? (monthlyLimit - spentThisMonth) : Infinity;
+        const remaining = (monthlyLimit !== undefined && monthlyLimit !== Infinity) ? (monthlyLimit - spentThisMonth) : Infinity;
         let remainingText = remaining === Infinity ? "ไม่จำกัดงบรายเดือน" : `${remaining.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿`;
         
         let statusBadge = `<span style="color:#10B981; font-weight:600;">พร้อมใช้งาน</span>`;
@@ -1057,4 +1092,76 @@ function arabicToThaiBaht(num) {
     }
 
     return result;
+}
+
+function getLimitPerRequest(category) {
+    if (appState.settings.customLimits && appState.settings.customLimits[category] && appState.settings.customLimits[category].limitPerRequest !== undefined) {
+        return appState.settings.customLimits[category].limitPerRequest;
+    }
+    return BUDGET_RULES[category].limitPerRequest;
+}
+
+function getLimitPerMonth(category, group) {
+    if (appState.settings.customLimits && appState.settings.customLimits[category] && appState.settings.customLimits[category].limitPerMonth !== undefined) {
+        return appState.settings.customLimits[category].limitPerMonth;
+    }
+    const rawLimit = BUDGET_RULES[category].limitPerMonth;
+    return typeof rawLimit === "object" ? rawLimit[group] : rawLimit;
+}
+
+function renderLimitsSettingsTable() {
+    const tbody = document.getElementById("limitsSettingsTableBody");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+    
+    Object.keys(BUDGET_RULES).forEach(key => {
+        const rule = BUDGET_RULES[key];
+        const custom = (appState.settings.customLimits && appState.settings.customLimits[key]) ? appState.settings.customLimits[key] : {};
+        
+        // Get limit value or blank string
+        const reqLimit = custom.limitPerRequest !== undefined ? custom.limitPerRequest : "";
+        const monthLimit = custom.limitPerMonth !== undefined ? custom.limitPerMonth : "";
+        
+        // Set placeholder showing default limit
+        let defaultReqPlaceholder = "";
+        if (rule.limitPerRequest) {
+            if (typeof rule.limitPerRequest === "object") {
+                defaultReqPlaceholder = "ตามประเภทยานพาหนะ";
+            } else if (rule.limitPerRequest === Infinity) {
+                defaultReqPlaceholder = "ไม่จำกัด";
+            } else {
+                defaultReqPlaceholder = rule.limitPerRequest;
+            }
+        } else {
+            defaultReqPlaceholder = "ไม่จำกัด";
+        }
+        
+        let defaultMonthPlaceholder = "";
+        if (rule.limitPerMonth) {
+            if (typeof rule.limitPerMonth === "object") {
+                const grp = appState.settings.group;
+                defaultMonthPlaceholder = `${rule.limitPerMonth[grp]} (กลุ่ม)`;
+            } else if (rule.limitPerMonth === Infinity) {
+                defaultMonthPlaceholder = "ไม่จำกัด";
+            } else {
+                defaultMonthPlaceholder = rule.limitPerMonth;
+            }
+        } else {
+            defaultMonthPlaceholder = "ไม่จำกัด";
+        }
+        
+        const row = document.createElement("tr");
+        row.style.borderBottom = "1px solid var(--border-color)";
+        row.innerHTML = `
+            <td style="padding: 0.75rem; font-weight: 500; color: var(--text-primary);">${rule.name}</td>
+            <td style="padding: 0.75rem; text-align: center; font-family: monospace; color: var(--text-secondary);">${rule.code}</td>
+            <td style="padding: 0.75rem; text-align: right;">
+                <input type="number" class="limit-req-input" data-category="${key}" value="${reqLimit}" placeholder="${defaultReqPlaceholder}" style="width: 130px; padding: 0.35rem 0.5rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); text-align: right; background-color: var(--bg-card); color: var(--text-primary);">
+            </td>
+            <td style="padding: 0.75rem; text-align: right;">
+                <input type="number" class="limit-month-input" data-category="${key}" value="${monthLimit}" placeholder="${defaultMonthPlaceholder}" style="width: 130px; padding: 0.35rem 0.5rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); text-align: right; background-color: var(--bg-card); color: var(--text-primary);">
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
 }

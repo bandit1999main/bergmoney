@@ -836,6 +836,24 @@
                                 <input type="number" id="setMonthlyBudget" value="30000" min="0" required>
                             </div>
                         </div>
+                        <div class="panel-header" style="margin-top: 2rem; margin-bottom: 1rem; border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
+                            <h3>กำหนดวงเงินจำกัดเฉพาะหมวดหมู่ (เว้นว่างไว้เพื่อใช้วงเงินดีฟอลต์ ปณท. 4/2566)</h3>
+                        </div>
+                        <div style="overflow-x: auto; margin-bottom: 1.5rem;">
+                            <table class="data-table" style="width: 100%; border-collapse: collapse; text-align: left;">
+                                <thead>
+                                    <tr style="border-bottom: 2px solid var(--border-color);">
+                                        <th style="padding: 0.75rem; font-weight: 600;">หมวดหมู่รายจ่าย</th>
+                                        <th style="padding: 0.75rem; font-weight: 600; text-align: center; width: 120px;">รหัสบัญชี</th>
+                                        <th style="padding: 0.75rem; font-weight: 600; text-align: right; width: 180px;">ต่อครั้งสูงสุด (บาท)</th>
+                                        <th style="padding: 0.75rem; font-weight: 600; text-align: right; width: 180px;">ต่อเดือนสูงสุด (บาท)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="limitsSettingsTableBody">
+                                    <!-- Dynamic rows created in app.js -->
+                                </tbody>
+                            </table>
+                        </div>
                         <div style="display: flex; justify-content: flex-end;">
                             <button type="submit" class="btn btn-primary">บันทึกค่าการตั้งค่า</button>
                         </div>
@@ -910,6 +928,6 @@
     <!-- Print Preview Container -->
     <div class="print-container" id="printSection"></div>
 
-    <script src="app.js?v=1.0.6"></script>
+    <script src="app.js?v=1.0.7"></script>
 </body>
 </html>
