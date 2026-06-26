@@ -693,6 +693,7 @@ function printDocument(docId) {
                 <td style="text-align: right;">${lastPriceText}</td>
                 <td>${item.qty}</td>
                 <td style="text-align: right;">${(item.qty * item.price).toLocaleString("th-TH", { minimumFractionDigits: 2 })}</td>
+                <td>${item.remark || ""}</td>
             </tr>
         `;
     });
