@@ -587,7 +587,7 @@
                     </div>
 
                     <form id="bskForm">
-                        <div class="form-grid">
+                        <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
                             <div class="form-group">
                                 <label for="officeName">หน่วยงานผู้ขอ</label>
                                 <input type="text" id="officeName" value="ที่ทำการไปรษณีย์มาบตาพุด" required>
@@ -597,12 +597,27 @@
                                 <input type="text" id="officePhone" value="088-987-8635" required>
                             </div>
                             <div class="form-group">
-                                <label for="docNumber">เลขที่ บสค.60 (ที่ ปณท ปข.2 (21150)/...)</label>
-                                <input type="text" id="docNumber" placeholder="ตัวอย่าง: 123/2566" required>
-                            </div>
-                            <div class="form-group">
                                 <label for="docDate">ลงวันที่</label>
                                 <input type="date" id="docDate" required>
+                            </div>
+                        </div>
+
+                        <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-top: 1rem;">
+                            <div class="form-group">
+                                <label for="memoNumber">เลขที่บันทึกข้อความ (ที่)</label>
+                                <input type="text" id="memoNumber" placeholder="ตัวอย่าง: 85/2566" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="bskNumber">เลขที่ บสค.60</label>
+                                <input type="text" id="bskNumber" placeholder="ตัวอย่าง: 123/2566" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="orderAuthority">คำสั่งอนุญาตซื้อ/จ้าง</label>
+                                <input type="text" id="orderAuthority" value="ตามคำสั่งที่ 4/2566" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="necessityReason">เหตุความจำเป็น</label>
+                                <input type="text" id="necessityReason" value="เพื่อใช้ในงานปฏิบัติงาน" required>
                             </div>
                         </div>
 
@@ -951,6 +966,6 @@
     <!-- Print Preview Container -->
     <div class="print-container" id="printSection"></div>
 
-    <script src="app.js?v=1.1.2"></script>
+    <script src="app.js?v=1.1.3"></script>
 </body>
 </html>

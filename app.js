@@ -61,7 +61,8 @@ function initApp() {
         appState.documents = [
             {
                 id: "DOC-20260601",
-                docNumber: "85/2566",
+                memoNumber: "85/2566",
+                bskNumber: "123/2566",
                 docDate: "2026-06-01",
                 officeName: "ที่ทำการไปรษณีย์มาบตาพุด",
                 officePhone: "088-987-8635",
@@ -72,7 +73,9 @@ function initApp() {
                 ],
                 total: 1350,
                 requesterName: "นายนิพล ทรัพย์หมื่นแสน",
-                requesterPosition: "หน.ปณ.มาบตาพุด"
+                requesterPosition: "หน.ปณ.มาบตาพุด",
+                orderAuthority: "ตามคำสั่งที่ 4/2566",
+                necessityReason: "เพื่อใช้ในงานปฏิบัติงาน"
             }
         ];
         
@@ -436,7 +439,10 @@ function handleBskSubmit(e) {
     const docDate = document.getElementById("docDate").value;
     const officeName = document.getElementById("officeName").value;
     const officePhone = document.getElementById("officePhone").value;
-    const docNumber = document.getElementById("docNumber").value;
+    const memoNumber = document.getElementById("memoNumber").value;
+    const bskNumber = document.getElementById("bskNumber").value;
+    const orderAuthority = document.getElementById("orderAuthority").value;
+    const necessityReason = document.getElementById("necessityReason").value;
     const hasQuotation = document.querySelector('input[name="hasQuotation"]:checked').value;
     
     const items = [];
@@ -459,7 +465,8 @@ function handleBskSubmit(e) {
 
     const newDoc = {
         id: "DOC-" + Date.now(),
-        docNumber,
+        memoNumber,
+        bskNumber,
         docDate,
         officeName,
         officePhone,
@@ -468,7 +475,9 @@ function handleBskSubmit(e) {
         items,
         total,
         requesterName,
-        requesterPosition
+        requesterPosition,
+        orderAuthority,
+        necessityReason
     };
 
     appState.documents.push(newDoc);
@@ -485,6 +494,11 @@ function handleBskSubmit(e) {
     if (offNameIn) offNameIn.value = appState.settings.officeName;
     if (reqNameIn) reqNameIn.value = appState.settings.officerName;
     if (reqPosIn) reqPosIn.value = appState.settings.officerPosition;
+
+    const orderAuthIn = document.getElementById("orderAuthority");
+    const necReasonIn = document.getElementById("necessityReason");
+    if (orderAuthIn) orderAuthIn.value = "ตามคำสั่งที่ 4/2566";
+    if (necReasonIn) necReasonIn.value = "เพื่อใช้ในงานปฏิบัติงาน";
 
     document.getElementById("formTableBody").innerHTML = `
         <tr>
@@ -624,7 +638,13 @@ function renderHistoryTable() {
 
         const row = `
             <tr>
-                <td style="font-weight:600;">บสค. 60 เลขที่ ${doc.docNumber}</td>
+                <td style="font-weight:600;">
+                    บสค. 60 เลขที่ ${doc.bskNumber || doc.docNumber || "-"}
+                    <br>
+                    <span style="font-size:0.75rem; font-weight:normal; color:var(--text-secondary);">
+                        บันทึกข้อความ เลขที่: ${doc.memoNumber || "-"}
+                    </span>
+                </td>
                 <td>${dateFormatted}</td>
                 <td>${cat ? cat.name : "ทั่วไป"}</td>
                 <td>${quotationBadge}</td>
@@ -773,13 +793,13 @@ function printDocument(docId) {
             </tr>
             <tr>
                 <td style="font-weight: bold; width: 15%;">ที่:</td>
-                <td style="width: 45%;">${doc.docNumber || "-"}</td>
+                <td style="width: 45%;">${doc.memoNumber || doc.docNumber || "-"}</td>
                 <td style="width: 10%; font-weight: bold;">วันที่:</td>
                 <td style="width: 30%;">${dateFormatted}</td>
             </tr>
             <tr>
                 <td style="font-weight: bold; border-bottom: 1px solid #000000; padding-bottom: 6px;">เรื่อง:</td>
-                <td colspan="3" style="border-bottom: 1px solid #000000; padding-bottom: 6px;">ขอความเห็นชอบการจัดซื้อ/จัดจ้าง (ที่มอบอำนาจการซื้อและการจ้างตามคำสั่ง ปณท ที่ 4/2566)</td>
+                <td colspan="3" style="border-bottom: 1px solid #000000; padding-bottom: 6px;">ขอความเห็นชอบการจัดซื้อ/จัดจ้าง (ที่มอบอำนาจการซื้อและการจ้าง${doc.orderAuthority || 'ตามคำสั่ง ปณท ที่ 4/2566'})</td>
             </tr>
             <tr>
                 <td style="font-weight: bold; padding-top: 6px;">เรียน:</td>
@@ -788,7 +808,7 @@ function printDocument(docId) {
         </table>
         
         <p style="text-indent: 1.5cm; margin-bottom: 8px; font-size: 11pt; line-height: 1.35;">
-            ด้วย <b>ปณ.มาบตาพุด</b> มีความจำเป็นต้องการจัดซื้อและจัดจ้างพัสดุบางประเภท (ที่มอบอำนาจการซื้อและการจ้างตามคำสั่ง ปณท ที่ 4/2566) ดังนี้:
+            ด้วย <b>ปณ.มาบตาพุด</b> มีความจำเป็นต้องการจัดซื้อและจัดจ้างพัสดุบางประเภท (ที่มอบอำนาจการซื้อและการจ้าง${doc.orderAuthority || 'ตามคำสั่ง ปณท ที่ 4/2566'}) ดังนี้:
         </p>
 
         ${categoryCheckboxesHtml}
