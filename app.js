@@ -1,6 +1,6 @@
 // ----------------------------------------------------
 // ระบบจัดซื้อจัดจ้าง บสค. 60 - ไปรษณีย์ไทย
-// สคริปต์หลักและระบบฐานข้อมูล LocalStorage
+// สคริปต์หลักควบคุมการคำนวณและประมวลผล LocalStorage
 // ----------------------------------------------------
 
 const BUDGET_RULES = {
@@ -26,9 +26,7 @@ let appState = {
     inventory: []
 };
 
-// ----------------------------------------------------
-// โหลดข้อมูลเข้าสู่แอปพลิเคชัน
-// ----------------------------------------------------
+// โหลดข้อมูลเริ่มต้นของแอปพลิเคชัน
 document.addEventListener("DOMContentLoaded", () => {
     initApp();
     setupEventHandlers();
@@ -47,7 +45,7 @@ function initApp() {
             console.error("Error loading localStorage data", e);
         }
     } else {
-        // ข้อมูลจำลองหากใช้งานครั้งแรกเพื่อให้ดูสวยงาม
+        // จำลองข้อมูลเพื่อความสวยงามในครั้งแรก
         appState.documents = [
             {
                 id: "DOC-20260601",
@@ -83,22 +81,18 @@ function initApp() {
         saveDataToStorage();
     }
 
-    // กำหนดค่าวันที่ปัจจุบันในฟอร์ม
+    // กำหนดวันที่เริ่มต้น
     const docDateInput = document.getElementById("docDate");
     if (docDateInput) docDateInput.value = new Date().toISOString().substring(0, 10);
 
     const invDateInput = document.getElementById("invDate");
     if (invDateInput) invDateInput.value = new Date().toISOString().substring(0, 10);
 
-    // กำหนดชื่อโปรไฟล์ในแถบ Sidebar
-    document.getElementById("sideRequesterName").innerText = appState.documents[0]?.requesterName || "หน.ปณ.มาบตาพุด";
-    document.getElementById("sideOfficeName").innerText = appState.documents[0]?.officeName || "ที่ทำการไปรษณีย์มาบตาพุด";
-
     renderMonthSelectOptions();
     updateUIElements();
     
-    // ตั้งค่าฟังก์ชันป้อนรายละเอียดชื่อเพื่อสืบค้นของแถวแรกเริ่มต้น
-    bindAutoSuggest(document.querySelector("#formItemsTableBody tr"));
+    // เชื่อมฟังก์ชัน Auto-suggest ช่องแรกเริ่มต้น
+    bindAutoSuggest(document.querySelector("#formTableBody tr"));
 }
 
 function saveDataToStorage() {
@@ -106,10 +100,10 @@ function saveDataToStorage() {
 }
 
 // ----------------------------------------------------
-// ผูกเหตุการณ์และการโต้ตอบต่างๆ
+// ระบบผูก Event และ Action
 // ----------------------------------------------------
 function setupEventHandlers() {
-    // แถบนำทางด้านข้าง
+    // การสลับแท็บ Sidebar
     document.querySelectorAll("aside .menu-item").forEach(item => {
         item.addEventListener("click", (e) => {
             const tabId = e.currentTarget.getAttribute("data-tab");
@@ -117,97 +111,58 @@ function setupEventHandlers() {
         });
     });
 
-    // ปุ่มเปลี่ยนธีมสลับ มืด/สว่าง
-    document.getElementById("themeToggle").addEventListener("click", () => {
+    // ปุ่มโหมดหน้าต่าง
+    document.getElementById("themeToggleBtn").addEventListener("click", () => {
         const body = document.body;
         body.classList.toggle("dark-theme");
         const isDark = body.classList.contains("dark-theme");
-        document.getElementById("themeToggle").querySelector("span").innerText = isDark ? "light_mode" : "dark_mode";
+        document.getElementById("themeToggleBtn").querySelector("span").innerText = isDark ? "light_mode" : "dark_mode";
     });
 
-    // การป้อนข้อมูลตารางจัดซื้อ
+    // เหตุการณ์แบบฟอร์มคำขออนุมัติ
     const bskForm = document.getElementById("bskForm");
     bskForm.addEventListener("submit", handleBskSubmit);
     
-    document.getElementById("addItemRowBtn").addEventListener("click", addFormItemRow);
+    document.getElementById("addItemBtn").addEventListener("click", addFormItemRow);
     document.getElementById("itemCategory").addEventListener("change", checkQuotaLimits);
-    document.getElementById("formItemsTableBody").addEventListener("input", handleTableInput);
+    document.getElementById("formTableBody").addEventListener("input", handleTableInput);
 
-    // Dialog จัดเก็บพัสดุคลัง
+    // Dialog จัดการคลังพัสดุ
     document.getElementById("addInventoryBtn").addEventListener("click", () => openModal("inventoryModal"));
     document.getElementById("inventoryForm").addEventListener("submit", handleInventorySubmit);
 
-    // ฟอร์มการตั้งค่า
+    // บันทึกการตั้งค่า
     document.getElementById("settingsForm").addEventListener("submit", handleSettingsSubmit);
 
-    // การจัดการ Backup
-    document.getElementById("exportData").addEventListener("click", exportBackupData);
-    document.getElementById("importDataBtn").addEventListener("click", () => {
-        document.getElementById("importFile").click();
+    // การจัดการ Backup/Restore ข้อมูล
+    document.getElementById("exportBtn").addEventListener("click", exportBackupData);
+    document.getElementById("importBtn").addEventListener("click", () => {
+        document.getElementById("importFileInput").click();
     });
-    document.getElementById("importFile").addEventListener("change", importBackupData);
+    document.getElementById("importFileInput").addEventListener("change", importBackupData);
 
     document.getElementById("reportMonthSelect").addEventListener("change", renderMonthlyReportTable);
-    document.getElementById("printMonthlyReportBtn").addEventListener("click", printMonthlyReport);
+    document.getElementById("printReportBtn").addEventListener("click", printMonthlyReport);
 }
-
-// ----------------------------------------------------
-// ระบบ Step Wizard ปรับแต่ง UX
-// ----------------------------------------------------
-window.goToStep = function(stepNum) {
-    // ตรวจสอบความสมบูรณ์ของฟิลด์ก่อนก้าวถัดไป
-    if (stepNum === 2) {
-        const officeName = document.getElementById("officeName").value;
-        const docNumber = document.getElementById("docNumber").value;
-        const category = document.getElementById("itemCategory").value;
-        
-        if (!officeName || !docNumber || !category) {
-            alert("กรุณากรอกข้อมูลในขั้นตอนที่ 1 ให้สมบูรณ์ รวมถึงการเลือกประเภทจัดซื้อ/จ้าง");
-            return;
-        }
-    }
-    
-    if (stepNum === 3) {
-        // คำนวณราคายอดรวมสุทธิ และตรวจสอบวงเงินก่อนไปขั้นตอนสุดท้าย
-        calculateFormTotal();
-    }
-
-    // ซ่อนเซกชันทั้งหมด
-    document.querySelectorAll(".wizard-section").forEach(sec => sec.style.display = "none");
-    document.getElementById(`form-step-${stepNum}`).style.display = "block";
-
-    // อัปเดตแถบระบุความก้าวหน้า (Indicators)
-    document.querySelectorAll(".wizard-step").forEach((step, i) => {
-        step.classList.remove("active", "completed");
-        const idx = i + 1;
-        if (idx === stepNum) {
-            step.classList.add("active");
-        } else if (idx < stepNum) {
-            step.classList.add("completed");
-        }
-    });
-};
 
 function switchTab(tabId) {
     document.querySelectorAll("aside .menu-item").forEach(item => {
         item.classList.toggle("active", item.getAttribute("data-tab") === tabId);
     });
-    document.querySelectorAll(".viewport .tab-pane").forEach(pane => {
+    document.querySelectorAll(".content .tab-pane").forEach(pane => {
         pane.classList.toggle("active", pane.id === tabId);
     });
 
-    // กำหนดชื่อหัวแท็บแสดงผล
     const titles = {
-        "dashboard": "แดชบอร์ดสรุปยอดขออนุมัติและวงเงิน",
-        "bsk60-form": "สร้างบันทึกข้อความขออนุมัติ บสค. 60 โฉมใหม่",
-        "history": "ประวัติหนังสือขออนุมัติจัดซื้อจัดจ้างย้อนหลัง",
-        "inventory": "บัญชีควบคุมพัสดุ (แบบที่ 2) คลังพัสดุ",
-        "monthly-report": "สรุปรายการจัดซื้อจัดจ้างส่ง ฝปข.2 ประจําเดือน (แบบที่ 3)",
-        "settings": "ตั้งค่าข้อมูลที่ทำการไปรษณีย์และรหัสสังกัด"
+        "dashboard": "แดชบอร์ดสรุปงบประมาณและโควตาวงเงิน",
+        "bsk60-form": "บันทึกข้อความขออนุมัติจัดซื้อจัดจ้าง บสค. 60",
+        "history": "ประวัติคำขอจัดซื้อจัดจ้าง บสค. 60",
+        "inventory": "บัญชีควบคุมพัสดุคลังพัสดุ (แบบที่ 2)",
+        "monthly-report": "สรุปรายการซื้อและการจ้างประจำเดือน (แบบที่ 3)",
+        "settings": "ตั้งค่าข้อมูลที่ทำการไปรษณีย์และรหัสหน่วยงาน"
     };
-    document.getElementById("currentTabTitle").innerText = titles[tabId] || "ระบบจัดการงบประมาณ";
+    document.getElementById("pageTitleText").innerText = titles[tabId] || "ระบบเบิกเงิน";
 
-    // รีเฟรชข้อมูลเมื่อสลับแท็บ
     if (tabId === "dashboard") {
         updateUIElements();
     } else if (tabId === "history") {
@@ -220,32 +175,29 @@ function switchTab(tabId) {
 }
 
 // ----------------------------------------------------
-// ระบบ Auto-complete / Auto-suggest ค้นหาประวัติ
+// ฟังก์ชัน Auto-suggest ค้นหาคลังพัสดุ/บิลเก่า
 // ----------------------------------------------------
 function bindAutoSuggest(row) {
     const nameInput = row.querySelector(".item-name");
-    const suggestList = row.querySelector(".suggest-list");
+    const suggestBox = row.querySelector(".suggest-box");
 
-    nameInput.addEventListener("focus", () => showSuggestions(nameInput, suggestList));
-    nameInput.addEventListener("input", () => showSuggestions(nameInput, suggestList));
+    nameInput.addEventListener("focus", () => showSuggestions(nameInput, suggestBox));
+    nameInput.addEventListener("input", () => showSuggestions(nameInput, suggestBox));
 
-    // ปิดเมื่อคลิกด้านนอก
     document.addEventListener("click", (e) => {
         if (!row.contains(e.target)) {
-            suggestList.style.display = "none";
+            suggestBox.style.display = "none";
         }
     });
 }
 
-function showSuggestions(input, listElement) {
+function showSuggestions(input, boxElement) {
     const val = input.value.trim().toLowerCase();
-    listElement.innerHTML = "";
+    boxElement.innerHTML = "";
     
-    // ดึงประวัติเฉพาะชื่อที่ไม่ซ้ำกัน
     const itemsHistory = [];
     const seen = new Set();
 
-    // 1. ดึงจากรายการเอกสารก่อนหน้า
     appState.documents.forEach(doc => {
         doc.items.forEach(item => {
             const name = item.name.trim();
@@ -261,7 +213,6 @@ function showSuggestions(input, listElement) {
         });
     });
 
-    // 2. ดึงจากคลังพัสดุ
     appState.inventory.forEach(inv => {
         const name = inv.name.trim();
         if (!seen.has(name) && inv.action === "receive") {
@@ -270,27 +221,25 @@ function showSuggestions(input, listElement) {
                 name: name,
                 lastDate: inv.date,
                 lastQty: inv.qty,
-                lastPrice: 0 // จะพยายามดึงราคาจากเอกสารอื่น
+                lastPrice: 0
             });
         }
     });
 
-    // กรองลิสต์รายการตามค่าที่พิมพ์ค้นหา
     const filtered = itemsHistory.filter(i => i.name.toLowerCase().includes(val));
 
     if (filtered.length === 0) {
-        listElement.style.display = "none";
+        boxElement.style.display = "none";
         return;
     }
 
     filtered.forEach(item => {
         const div = document.createElement("div");
         div.className = "suggest-item";
-        
         const dateFormatted = new Date(item.lastDate).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" });
         div.innerHTML = `
             <strong>${item.name}</strong>
-            <span class="suggest-item-desc">ประวัติล่าสุด: ${dateFormatted} | ${item.lastQty} ชิ้น${item.lastPrice ? ` | ${item.lastPrice}฿` : ''}</span>
+            <span class="suggest-item-desc">ครั้งล่าสุด: ${dateFormatted} | จำนวน: ${item.lastQty} | ${item.lastPrice ? `${item.lastPrice}฿` : 'ไม่มีประวัติราคา'}</span>
         `;
 
         div.addEventListener("click", () => {
@@ -300,18 +249,18 @@ function showSuggestions(input, listElement) {
             row.querySelector(".item-last-qty").value = item.lastQty;
             row.querySelector(".item-last-price").value = item.lastPrice || 0;
             
-            listElement.style.display = "none";
+            boxElement.style.display = "none";
             calculateFormTotal();
         });
 
-        listElement.appendChild(div);
+        boxElement.appendChild(div);
     });
 
-    listElement.style.display = "block";
+    boxElement.style.display = "block";
 }
 
 // ----------------------------------------------------
-// ระบบคำนวณ ยอดรวม และการตรวจสอบวงเงินอนุมัติ
+// การคำนวณและตรวจสอบวงเงิน
 // ----------------------------------------------------
 function handleTableInput(e) {
     if (e.target.classList.contains("item-price") || e.target.classList.contains("item-qty")) {
@@ -320,7 +269,7 @@ function handleTableInput(e) {
 }
 
 function calculateFormTotal() {
-    const rows = document.querySelectorAll("#formItemsTableBody tr");
+    const rows = document.querySelectorAll("#formTableBody tr");
     let total = 0;
     
     rows.forEach(row => {
@@ -339,7 +288,7 @@ function checkQuotaLimits() {
     const category = document.getElementById("itemCategory").value;
     if (!category) return;
 
-    const rows = document.querySelectorAll("#formItemsTableBody tr");
+    const rows = document.querySelectorAll("#formTableBody tr");
     let total = 0;
     rows.forEach(row => {
         const qty = parseFloat(row.querySelector(".item-qty").value) || 0;
@@ -352,17 +301,15 @@ function checkQuotaLimits() {
     let isOverLimit = false;
     let message = "";
 
-    // 1. ตรวจสอบวงเงินต่อครั้ง
     if (rule.limitPerRequest) {
         if (typeof rule.limitPerRequest === "object") {
-            message = `กรุณาตรวจสอบว่ายอดจัดซื้อจัดจ้างรายคันไม่เกินวงเงินอนุมัติครั้งละ (รถยนต์ 15,000฿ / จยย. 3,000฿)`;
+            message = `กรุณาตรวจสอบว่ายอดจัดซื้อยานพาหนะรายคันไม่เกินวงเงินสูงสุดครั้งละ (รถยนต์ 15,000฿ / จยย. 3,000฿)`;
         } else if (total > rule.limitPerRequest) {
             isOverLimit = true;
-            message = `ยอดเงินรวม ${total.toLocaleString()} ฿ เกินขีดจำกัดอนุมัติสูงสุดต่อครั้งที่ ${rule.limitPerRequest.toLocaleString()} ฿ ของประเภท ${rule.name}`;
+            message = `การจัดซื้อรายการนี้เกินขีดจำกัดอนุมัติครั้งละ ${rule.limitPerRequest.toLocaleString()} บาทตามคำสั่ง ปณท ที่ 4/2566`;
         }
     }
 
-    // 2. ตรวจสอบงบประมาณสะสมรายเดือน
     if (rule.limitPerMonth && !isOverLimit) {
         let monthlyLimit = typeof rule.limitPerMonth === "object" ? rule.limitPerMonth[group] : rule.limitPerMonth;
         const currentMonthStr = document.getElementById("docDate").value.substring(0, 7);
@@ -372,7 +319,7 @@ function checkQuotaLimits() {
 
         if (spentThisMonth + total > monthlyLimit) {
             isOverLimit = true;
-            message = `ยอดเบิกสะสมในเดือนนี้จะเท่ากับ ${(spentThisMonth + total).toLocaleString()} ฿ ซึ่งเกินขีดจำกัดอนุมัติรายเดือนที่ ${monthlyLimit.toLocaleString()} ฿`;
+            message = `งบรวมสะสมเดือนนี้เท่ากับ ${(spentThisMonth + total).toLocaleString()} บาท ซึ่งเกินวงเงินจำกัดต่อเดือนของสังกัดที่ ${monthlyLimit.toLocaleString()} บาท`;
         }
     }
 
@@ -391,28 +338,28 @@ function checkQuotaLimits() {
         saveDocBtn.disabled = false;
         saveDocBtn.style.opacity = "1";
         saveDocBtn.style.cursor = "pointer";
-        saveDocBtn.innerHTML = `<span class="material-symbols-outlined">save</span> ยืนยันบันทึกขออนุมัติ`;
+        saveDocBtn.innerHTML = `<span class="material-symbols-outlined">save</span> บันทึกคำขอ บสค.60`;
     }
 }
 
 function addFormItemRow() {
-    const tbody = document.getElementById("formItemsTableBody");
+    const tbody = document.getElementById("formTableBody");
     const rowCount = tbody.querySelectorAll("tr").length + 1;
     const newRow = `
         <tr>
             <td style="text-align: center;">${rowCount}</td>
-            <td class="autosuggest-wrapper">
-                <input type="text" class="item-name" placeholder="ระบุรายละเอียดสิ่งของ/บริการ (พิมพ์เพื่อค้นหาประวัติ)" required>
-                <div class="suggest-list"></div>
+            <td class="suggest-wrapper">
+                <input type="text" class="item-name" placeholder="ระบุรายละเอียดสิ่งของ (พิมพ์เพื่อค้นหาประวัติ)" required style="width: 100%;">
+                <div class="suggest-box"></div>
             </td>
-            <td><input type="date" class="item-last-date" style="padding: 0.5rem;"></td>
-            <td><input type="number" class="item-last-qty" placeholder="จำนวน" style="text-align: center; padding: 0.5rem;"></td>
-            <td><input type="number" class="item-last-price" placeholder="0.00" min="0" step="0.01" style="text-align: right; padding: 0.5rem;"></td>
-            <td><input type="number" class="item-qty" value="1" min="1" required style="text-align: center; padding: 0.5rem;"></td>
-            <td><input type="number" class="item-price" placeholder="0.00" min="0" step="0.01" required style="text-align: right; padding: 0.5rem;"></td>
-            <td style="text-align: center;">
-                <button type="button" class="btn-icon btn-danger remove-row-btn" style="width:30px; height:30px; margin: auto;">
-                    <span class="material-symbols-outlined" style="font-size: 18px;">delete</span>
+            <td><input type="date" class="item-last-date" style="width: 100%;"></td>
+            <td><input type="number" class="item-last-qty" placeholder="จำนวน" style="width: 100%; text-align: center;"></td>
+            <td><input type="number" class="item-last-price" placeholder="0.00" min="0" step="0.01" style="width: 100%; text-align: right;"></td>
+            <td><input type="number" class="item-qty" value="1" min="1" required style="width: 100%; text-align: center;"></td>
+            <td><input type="number" class="item-price" placeholder="0.00" min="0" step="0.01" required style="width: 100%; text-align: right;"></td>
+            <td>
+                <button type="button" class="btn-icon-only remove-row-btn" style="margin: auto;">
+                    <span class="material-symbols-outlined">delete</span>
                 </button>
             </td>
         </tr>
@@ -433,14 +380,14 @@ function addFormItemRow() {
 }
 
 function reindexFormTable() {
-    const rows = document.querySelectorAll("#formItemsTableBody tr");
+    const rows = document.querySelectorAll("#formTableBody tr");
     rows.forEach((row, i) => {
         row.querySelector("td:first-child").innerText = i + 1;
     });
 }
 
 // ----------------------------------------------------
-// การดำเนินการส่งและจัดเก็บข้อมูลประวัติ (บสค. 60)
+// ระบบบันทึก บสค. 60 และคลังพัสดุ
 // ----------------------------------------------------
 function handleBskSubmit(e) {
     e.preventDefault();
@@ -454,7 +401,7 @@ function handleBskSubmit(e) {
     
     const items = [];
     let total = 0;
-    const rows = document.querySelectorAll("#formItemsTableBody tr");
+    const rows = document.querySelectorAll("#formTableBody tr");
     rows.forEach(row => {
         const name = row.querySelector(".item-name").value;
         const lastDate = row.querySelector(".item-last-date").value;
@@ -485,50 +432,41 @@ function handleBskSubmit(e) {
     };
 
     appState.documents.push(newDoc);
-    
-    // บันทึกและดึงโปรไฟล์ไปอัปเดตแถบด้านข้าง
     saveDataToStorage();
 
-    alert("บันทึกข้อมูลคำขออนุมัติ บสค. 60 ลงฐานข้อมูลสำเร็จ!");
+    alert("บันทึกข้อมูลคำขอจัดซื้อจัดจ้าง บสค. 60 เรียบร้อย!");
     
-    // รีเซ็ตฟอร์มกลับไปหน้าหลัก
     document.getElementById("bskForm").reset();
-    document.getElementById("formItemsTableBody").innerHTML = `
+    document.getElementById("formTableBody").innerHTML = `
         <tr>
             <td style="text-align: center;">1</td>
-            <td class="autosuggest-wrapper">
-                <input type="text" class="item-name" placeholder="ระบุรายละเอียดสิ่งของ/บริการ (พิมพ์เพื่อค้นหาประวัติ)" required>
-                <div class="suggest-list"></div>
+            <td class="suggest-wrapper">
+                <input type="text" class="item-name" placeholder="ระบุรายละเอียดสิ่งของ (พิมพ์เพื่อค้นหาประวัติ)" required style="width: 100%;">
+                <div class="suggest-box"></div>
             </td>
-            <td><input type="date" class="item-last-date" style="padding: 0.5rem;"></td>
-            <td><input type="number" class="item-last-qty" placeholder="จำนวน" style="text-align: center; padding: 0.5rem;"></td>
-            <td><input type="number" class="item-last-price" placeholder="0.00" min="0" step="0.01" style="text-align: right; padding: 0.5rem;"></td>
-            <td><input type="number" class="item-qty" value="1" min="1" required style="text-align: center; padding: 0.5rem;"></td>
-            <td><input type="number" class="item-price" placeholder="0.00" min="0" step="0.01" required style="text-align: right; padding: 0.5rem;"></td>
-            <td style="text-align: center;">
-                <button type="button" class="btn-icon btn-danger remove-row-btn" style="width:30px; height:30px; margin: auto;">
-                    <span class="material-symbols-outlined" style="font-size: 18px;">delete</span>
+            <td><input type="date" class="item-last-date" style="width: 100%;"></td>
+            <td><input type="number" class="item-last-qty" placeholder="จำนวน" style="width: 100%; text-align: center;"></td>
+            <td><input type="number" class="item-last-price" placeholder="0.00" min="0" step="0.01" style="width: 100%; text-align: right;"></td>
+            <td><input type="number" class="item-qty" value="1" min="1" required style="width: 100%; text-align: center;"></td>
+            <td><input type="number" class="item-price" placeholder="0.00" min="0" step="0.01" required style="width: 100%; text-align: right;"></td>
+            <td>
+                <button type="button" class="btn-icon-only remove-row-btn" style="margin: auto;">
+                    <span class="material-symbols-outlined">delete</span>
                 </button>
             </td>
         </tr>
     `;
-    bindAutoSuggest(document.querySelector("#formItemsTableBody tr"));
+    bindAutoSuggest(document.querySelector("#formTableBody tr"));
     calculateFormTotal();
-    
-    // สลับไปยังหน้า 1 ของฟอร์มเตรียมความพร้อม
-    goToStep(1);
     switchTab("history");
 }
 
-// ----------------------------------------------------
-// ระบบบัญชีคลังวัสดุ (แบบที่ 2)
-// ----------------------------------------------------
 function renderInventoryTable() {
     const tbody = document.getElementById("inventoryTableBody");
     tbody.innerHTML = "";
 
     if (appState.inventory.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; color:var(--text-secondary);">ไม่มีข้อมูลประวัติคลังสินค้าคงเหลือ</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; color:var(--text-secondary);">ไม่มีข้อมูลในคลังสินค้า</td></tr>`;
         return;
     }
 
@@ -539,17 +477,17 @@ function renderInventoryTable() {
         const row = `
             <tr>
                 <td>${dateFormatted}</td>
-                <td style="font-weight:600; color:var(--thp-blue-light);">${inv.name}</td>
+                <td style="font-weight:600;">${inv.name}</td>
                 <td>${inv.ref}</td>
                 <td style="color:var(--success); font-weight:600;">${isReceive ? `+ ${inv.qty}` : '-'}</td>
-                <td style="color:var(--warning); font-weight:600;">${!isReceive ? `- ${inv.qty}` : '-'}</td>
-                <td style="font-weight:600; color:var(--text-primary);">${inv.balance}</td>
+                <td style="color:#EF4444; font-weight:600;">${!isReceive ? `- ${inv.qty}` : '-'}</td>
+                <td style="font-weight:600;">${inv.balance}</td>
                 <td>${inv.receiver || "-"}</td>
                 <td>${inv.inspectors || "-"}</td>
                 <td>${inv.auditor || "-"}</td>
                 <td>
-                    <button class="btn-icon btn-danger" style="width:25px; height:25px; margin:auto;" onclick="deleteInventoryItem('${inv.id}')">
-                        <span class="material-symbols-outlined" style="font-size:14px;">delete</span>
+                    <button class="btn-icon-only" style="width:28px; height:28px; margin:auto;" onclick="deleteInventoryItem('${inv.id}')">
+                        <span class="material-symbols-outlined" style="font-size:16px;">delete</span>
                     </button>
                 </td>
             </tr>
@@ -581,7 +519,7 @@ function handleInventorySubmit(e) {
         newBalance += qty;
     } else {
         if (qty > lastBalance) {
-            alert(`สินค้าไม่เพียงพอที่จะเบิกจ่าย (คงคลังปัจจุบัน: ${lastBalance} หน่วย)`);
+            alert(`สินค้าไม่เพียงพอเบิกจ่าย (คงคลังปัจจุบัน: ${lastBalance} หน่วย)`);
             return;
         }
         newBalance -= qty;
@@ -609,7 +547,7 @@ function handleInventorySubmit(e) {
 }
 
 function deleteInventoryItem(itemId) {
-    if (confirm("ลบประวัติพัสดุคลังชิ้นนี้?")) {
+    if (confirm("ต้องการลบพัสดุคลังรายการนี้?")) {
         appState.inventory = appState.inventory.filter(item => item.id !== itemId);
         saveDataToStorage();
         renderInventoryTable();
@@ -617,14 +555,14 @@ function deleteInventoryItem(itemId) {
 }
 
 // ----------------------------------------------------
-// ประวัติคำขอเสนอ และสรุปสถิติต่างๆ
+// รายงานสรุปผลสถิติและประวัติขออนุมัติ
 // ----------------------------------------------------
 function renderHistoryTable() {
     const tbody = document.getElementById("historyTableBody");
     tbody.innerHTML = "";
 
     if (appState.documents.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-secondary);">ไม่มีประวัติการบันทึกขออนุมัติ</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-secondary);">ไม่มีประวัติเอกสารจัดทำอนุมัติ</td></tr>`;
         return;
     }
 
@@ -632,21 +570,21 @@ function renderHistoryTable() {
         const cat = BUDGET_RULES[doc.itemCategory];
         const dateFormatted = new Date(doc.docDate).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" });
         const quotationBadge = doc.hasQuotation === "true" 
-            ? `<span style="background:var(--success-light); color:var(--success); padding:4px 8px; border-radius:12px; font-size:0.75rem; font-weight:600;">มี</span>`
-            : `<span style="background:var(--danger-light); color:var(--danger); padding:4px 8px; border-radius:12px; font-size:0.75rem; font-weight:600;">ไม่มี</span>`;
+            ? `<span style="background-color:rgba(16,185,129,0.15); color:var(--success); padding:3px 8px; border-radius:12px; font-size:0.75rem; font-weight:600;">มี</span>`
+            : `<span style="background-color:rgba(239,68,68,0.15); color:#EF4444; padding:3px 8px; border-radius:12px; font-size:0.75rem; font-weight:600;">ไม่มี</span>`;
 
         const row = `
             <tr>
-                <td style="font-weight:600; color:var(--thp-blue-light);">บสค. 60 เลขที่ ${doc.docNumber}</td>
+                <td style="font-weight:600;">บสค. 60 เลขที่ ${doc.docNumber}</td>
                 <td>${dateFormatted}</td>
-                <td style="font-size:0.9rem;">${cat ? cat.name : "ทั่วไป"}</td>
+                <td>${cat ? cat.name : "ทั่วไป"}</td>
                 <td>${quotationBadge}</td>
                 <td style="font-weight:700; color:var(--thp-red);">${doc.total.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿</td>
                 <td>${doc.requesterName}</td>
                 <td>
-                    <div class="action-group" style="justify-content:center;">
+                    <div style="display:flex; gap:0.5rem; justify-content:center;">
                         <button class="btn btn-secondary" style="padding: 4px 10px; font-size:0.8rem;" onclick="printDocument('${doc.id}')">
-                            <span class="material-symbols-outlined" style="font-size:16px;">print</span> พิมพ์บิล
+                            <span class="material-symbols-outlined" style="font-size:16px;">print</span> พิมพ์
                         </button>
                         <button class="btn btn-danger" style="padding: 4px 10px; font-size:0.8rem;" onclick="deleteDocument('${doc.id}')">
                             <span class="material-symbols-outlined" style="font-size:16px;">delete</span> ลบ
@@ -660,16 +598,13 @@ function renderHistoryTable() {
 }
 
 function deleteDocument(docId) {
-    if (confirm("ลบประวัติ บสค. 60 นี้ออกจากระบบใช่ไหม?")) {
+    if (confirm("ลบประวัติใบขออนุมัตินี้ออกจากฐานข้อมูล?")) {
         appState.documents = appState.documents.filter(doc => doc.id !== docId);
         saveDataToStorage();
         renderHistoryTable();
     }
 }
 
-// ----------------------------------------------------
-// สรุปยอดสะสมและประวัติรายเดือน (แบบที่ 3)
-// ----------------------------------------------------
 function renderMonthSelectOptions() {
     const select = document.getElementById("reportMonthSelect");
     select.innerHTML = "";
@@ -699,7 +634,7 @@ function renderMonthlyReportTable() {
     let grandTotal = 0;
 
     if (monthlyDocs.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:var(--text-secondary);">ไม่มีประวัติการซื้อขายในเดือนนี้</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:var(--text-secondary);">ไม่มีรายการซื้อขายในเดือนนี้</td></tr>`;
         document.getElementById("monthlyReportTotal").innerText = "0.00 ฿";
         return;
     }
@@ -734,7 +669,7 @@ function renderMonthlyReportTable() {
 }
 
 // ----------------------------------------------------
-// ระบบพิมพ์เอกสาร บสค. 60 และ แบบที่ 3
+// ระบบจัดพิมพ์
 // ----------------------------------------------------
 function printDocument(docId) {
     const doc = appState.documents.find(d => d.id === docId);
@@ -766,23 +701,21 @@ function printDocument(docId) {
     const dateFormatted = docDateObj.toLocaleDateString("th-TH", { day: "numeric", month: "long", year: "numeric" });
 
     const catKeys = Object.keys(BUDGET_RULES);
-    let categoryCheckboxesHtml = `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 15px 0; font-size: 11pt; border: 1.5px solid #000000; padding: 12px; border-radius: 6px; line-height: 1.6;">`;
+    let categoryCheckboxesHtml = `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 15px 0; font-size: 11pt; border: 1px solid #000000; padding: 12px; border-radius: 6px;">`;
     catKeys.forEach(k => {
         const isChecked = doc.itemCategory === k;
-        const symbol = isChecked ? "☑" : "☐";
-        const style = isChecked ? "font-weight: bold; color: #000000;" : "color: #000000;";
-        categoryCheckboxesHtml += `<div style="${style}">${symbol} ${BUDGET_RULES[k].name}</div>`;
+        const symbol = isChecked ? "[ ✔ ]" : "[ &nbsp;&nbsp; ]";
+        categoryCheckboxesHtml += `<div>${symbol} ${BUDGET_RULES[k].name}</div>`;
     });
     categoryCheckboxesHtml += `</div>`;
 
     printSection.innerHTML = `
         <div class="print-header">
-            <svg width="80" height="40" viewBox="0 0 100 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M0 0H100L85 30H15L0 0Z" fill="#D81B60"/>
-                <path d="M15 30H85L65 65H5L15 30Z" fill="#0F2C59"/>
-                <path d="M5 65H65L55 80H0L5 65Z" fill="#1E3E72"/>
+            <svg width="60" height="30" viewBox="0 0 100 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M0 0H100L85 30H15L0 0Z" fill="#E31837"/>
+                <path d="M15 30H85L65 65H5L15 30Z" fill="#1E3A8A"/>
             </svg>
-            <div style="text-align: right; font-weight: bold; font-size: 18pt;">บันทึกข้อความ</div>
+            <div style="font-weight: bold; font-size: 16pt;">บันทึกข้อความ</div>
         </div>
         <table class="memo-table">
             <tr>
@@ -826,9 +759,9 @@ function printDocument(docId) {
                 </tr>
                 <tr>
                     <th style="font-size: 9pt;">ว.ด.ป.</th>
-                    <th style="font-size: 9pt;">จำนวน/ปริมาณ</th>
+                    <th style="font-size: 9pt;">จำนวน</th>
                     <th style="font-size: 9pt;">จำนวนเงิน (บาท)</th>
-                    <th style="font-size: 9pt;">จำนวน/ปริมาณ</th>
+                    <th style="font-size: 9pt;">จำนวน</th>
                     <th style="font-size: 9pt;">จำนวนเงิน (บาท)</th>
                 </tr>
             </thead>
@@ -844,12 +777,12 @@ function printDocument(docId) {
             </tbody>
         </table>
 
-        <p style="text-indent: 1.5cm; margin-bottom: 25px;">
+        <p style="text-indent: 1.5cm; margin-bottom: 20px;">
             จึงเรียนมาเพื่อโปรดพิจารณาอนุญาต หากเห็นชอบจักได้ดำเนินการตามที่ ปณท มอบอำนาจการซื้อและการจ้างไว้ให้ต่อไป จักขอบคุณยิ่ง
         </p>
 
-        <div class="signature-section">
-            <div class="sig-block" style="margin-left: auto;">
+        <div class="sig-section">
+            <div class="sig-block">
                 <p style="margin-bottom: 45px;">ลงชื่อ..............................................................</p>
                 <p style="font-weight: bold;">(${doc.requesterName})</p>
                 <p>${doc.requesterPosition}</p>
@@ -892,7 +825,7 @@ function printMonthlyReport() {
                     <td>บสค. 60 เลขที่ ${doc.docNumber}</td>
                     <td>ตามคำสั่งที่ 4/2566</td>
                     <td>${dateFormatted}</td>
-                    <td>เพื่อใช้ในงานทำการ</td>
+                    <td>เพื่อใช้ในงานปฏิบัติงาน</td>
                     <td style="text-align: right;">${itemTotal.toLocaleString("th-TH", { minimumFractionDigits: 2 })}</td>
                 </tr>
             `;
@@ -901,15 +834,14 @@ function printMonthlyReport() {
 
     printSection.innerHTML = `
         <div class="print-header">
-            <svg width="80" height="40" viewBox="0 0 100 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M0 0H100L85 30H15L0 0Z" fill="#D81B60"/>
-                <path d="M15 30H85L65 65H5L15 30Z" fill="#0F2C59"/>
-                <path d="M5 65H65L55 80H0L5 65Z" fill="#1E3E72"/>
+            <svg width="60" height="30" viewBox="0 0 100 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M0 0H100L85 30H15L0 0Z" fill="#E31837"/>
+                <path d="M15 30H85L65 65H5L15 30Z" fill="#1E3A8A"/>
             </svg>
-            <div style="text-align: right; font-weight: bold; font-size: 16pt;">แบบที่ 3</div>
+            <div style="font-weight: bold; font-size: 16pt;">แบบที่ 3</div>
         </div>
-        <h2 class="print-title">บัญชีสรุปรายการซื้อและการจ้างประจำเดือน</h2>
-        <div style="text-align: center; margin-bottom: 25px; font-size: 14pt;">
+        <h2 style="text-align: center; margin-bottom: 10px;">บัญชีสรุปรายการซื้อและการจ้างประจำเดือน</h2>
+        <div style="text-align: center; margin-bottom: 20px; font-size: 13pt;">
             ที่ทำการ: <b>ที่ทำการไปรษณีย์มาบตาพุด</b> &nbsp;&nbsp;&nbsp; ประจำเดือน <b>${thaiMonthText}</b>
         </div>
         
@@ -936,8 +868,8 @@ function printMonthlyReport() {
             </tbody>
         </table>
 
-        <div class="signature-section">
-            <div class="sig-block" style="margin-left: auto;">
+        <div class="sig-section">
+            <div class="sig-block">
                 <p style="margin-bottom: 45px;">ลงชื่อ..............................................................</p>
                 <p style="font-weight: bold;">(นายนิพล ทรัพย์หมื่นแสน)</p>
                 <p>หัวหน้าที่ทำการไปรษณีย์มาบตาพุด</p>
@@ -949,11 +881,11 @@ function printMonthlyReport() {
 }
 
 // ----------------------------------------------------
-// ฟังก์ชันเสริมอื่นๆ
+// UI Auxiliaries
 // ----------------------------------------------------
-function openModal(modalId) {
+window.openModal = function(modalId) {
     document.getElementById(modalId).classList.add("active");
-}
+};
 
 window.closeModal = function(modalId) {
     document.getElementById(modalId).classList.remove("active");
@@ -964,7 +896,7 @@ function handleSettingsSubmit(e) {
     appState.settings.group = document.getElementById("setGroupName").value;
     appState.settings.monthlyBudget = parseFloat(document.getElementById("setMonthlyBudget").value) || 0;
     saveDataToStorage();
-    alert("บันทึกการตั้งค่าระบบใหม่เรียบร้อยแล้ว!");
+    alert("บันทึกการตั้งค่าแล้ว!");
     switchTab("dashboard");
 }
 
@@ -979,13 +911,13 @@ function updateUIElements() {
     const remainingOfficeBudget = appState.settings.monthlyBudget - totalSpentThisMonth;
     const statBudgetElement = document.getElementById("statBudget");
     statBudgetElement.innerText = `${remainingOfficeBudget.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿`;
-    statBudgetElement.style.color = remainingOfficeBudget < 2000 ? "var(--danger)" : "var(--success)";
+    statBudgetElement.style.color = remainingOfficeBudget < 2000 ? "#EF4444" : "#10B981";
 
     renderBudgetQuotaTable(currentMonthStr);
 }
 
 function renderBudgetQuotaTable(currentMonthStr) {
-    const tbody = document.getElementById("budgetLimitTableBody");
+    const tbody = document.getElementById("dashboardBudgetTableBody");
     tbody.innerHTML = "";
 
     const userGroup = appState.settings.group;
@@ -996,7 +928,7 @@ function renderBudgetQuotaTable(currentMonthStr) {
         let limitPerRequestText = "-";
         if (rule.limitPerRequest) {
             if (typeof rule.limitPerRequest === "object") {
-                limitPerRequestText = `รถยนต์: ${rule.limitPerRequest.car.toLocaleString()}฿ / จยย.: ${rule.limitPerRequest.bike.toLocaleString()}฿`;
+                limitPerRequestText = `รถ: ${rule.limitPerRequest.car.toLocaleString()}฿ / จยย.: ${rule.limitPerRequest.bike.toLocaleString()}฿`;
             } else {
                 limitPerRequestText = `${rule.limitPerRequest.toLocaleString()} ฿`;
             }
@@ -1007,7 +939,7 @@ function renderBudgetQuotaTable(currentMonthStr) {
         if (rule.limitPerMonth) {
             if (typeof rule.limitPerMonth === "object") {
                 monthlyLimit = rule.limitPerMonth[userGroup];
-                limitPerMonthText = `${monthlyLimit.toLocaleString()} ฿ (กลุ่มที่ทำการ)`;
+                limitPerMonthText = `${monthlyLimit.toLocaleString()} ฿ (กลุ่ม)`;
             } else {
                 monthlyLimit = rule.limitPerMonth;
                 limitPerMonthText = `${monthlyLimit.toLocaleString()} ฿`;
@@ -1021,20 +953,20 @@ function renderBudgetQuotaTable(currentMonthStr) {
         const remaining = monthlyLimit ? (monthlyLimit - spentThisMonth) : Infinity;
         let remainingText = remaining === Infinity ? "ไม่จำกัดงบรายเดือน" : `${remaining.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿`;
         
-        let statusBadge = `<span style="background:var(--success-light); color:var(--success); padding:3px 8px; border-radius:12px; font-size:0.75rem; font-weight:600;">พร้อมใช้งาน</span>`;
+        let statusBadge = `<span style="color:#10B981; font-weight:600;">พร้อมใช้งาน</span>`;
         if (remaining <= 0 && remaining !== Infinity) {
-            statusBadge = `<span style="background:var(--danger-light); color:var(--danger); padding:3px 8px; border-radius:12px; font-size:0.75rem; font-weight:600;">เต็มวงเงินแล้ว</span>`;
+            statusBadge = `<span style="color:#EF4444; font-weight:600;">เต็มวงเงินแล้ว</span>`;
         } else if (remaining < 1000 && remaining !== Infinity) {
-            statusBadge = `<span style="background:var(--warning-light); color:var(--warning); padding:3px 8px; border-radius:12px; font-size:0.75rem; font-weight:600;">ใกล้เต็ม</span>`;
+            statusBadge = `<span style="color:#F59E0B; font-weight:600;">ใกล้เต็ม</span>`;
         }
 
         const row = `
             <tr>
-                <td style="font-weight:600; color:var(--thp-blue-light);">${rule.name} <span style="font-size:0.75rem; color:var(--text-secondary); display:block;">รหัสบัญชี: ${rule.code}</span></td>
+                <td style="font-weight:600;">${rule.name} <span style="font-size:0.75rem; color:var(--text-secondary); display:block;">รหัสบัญชี: ${rule.code}</span></td>
                 <td>${limitPerRequestText}</td>
                 <td>${limitPerMonthText}</td>
                 <td style="font-weight:500;">${spentThisMonth.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿</td>
-                <td style="font-weight:600; color: ${remaining <= 0 ? 'var(--danger)' : 'inherit'}">${remainingText}</td>
+                <td style="font-weight:600; color: ${remaining <= 0 ? '#EF4444' : 'inherit'}">${remainingText}</td>
                 <td>${statusBadge}</td>
             </tr>
         `;
@@ -1065,10 +997,10 @@ function importBackupData(e) {
                 alert("นำเข้าข้อมูลสำรองเข้าระบบแล้ว!");
                 initApp();
             } else {
-                alert("รูปแบบไฟล์สำรองไม่ถูกต้อง");
+                alert("รูปแบบไฟล์สะสมไม่ถูกต้อง");
             }
         } catch (error) {
-            alert("ไม่สามารถอ่านข้อมูลสะสมได้: " + error.message);
+            alert("ไม่สามารถอ่านข้อมูลได้: " + error.message);
         }
     };
     fileReader.readAsText(e.target.files[0]);

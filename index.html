@@ -10,523 +10,902 @@
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Google Icons -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-    <link rel="stylesheet" href="styles.css">
+    <style>
+        :root {
+            --thp-red: #E31837;
+            --thp-red-dark: #B91C1C;
+            --thp-blue: #1E3A8A;
+            --thp-blue-dark: #1E293B;
+            --bg-app: #F8FAFC;
+            --bg-card: #FFFFFF;
+            --text-primary: #0F172A;
+            --text-secondary: #475569;
+            --border-color: #E2E8F0;
+            --radius-md: 12px;
+            --radius-sm: 8px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+            --transition: all 0.2s ease-in-out;
+        }
+
+        body.dark-theme {
+            --bg-app: #0F172A;
+            --bg-card: #1E293B;
+            --text-primary: #F8FAFC;
+            --text-secondary: #94A3B8;
+            --border-color: #334155;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Prompt', 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-app);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            transition: var(--transition);
+        }
+
+        /* Sidebar */
+        aside {
+            width: 260px;
+            background-color: var(--thp-blue-dark);
+            color: #FFFFFF;
+            padding: 2rem 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0 0.5rem;
+        }
+
+        .brand h1 {
+            font-size: 1.15rem;
+            font-weight: 700;
+        }
+
+        .menu-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.85rem 1rem;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: var(--transition);
+            color: #CBD5E1;
+            font-weight: 500;
+        }
+
+        .menu-item:hover {
+            background-color: rgba(255, 255, 255, 0.08);
+            color: #FFFFFF;
+        }
+
+        .menu-item.active {
+            background-color: var(--thp-red);
+            color: #FFFFFF;
+            box-shadow: 0 4px 12px rgba(227, 24, 55, 0.25);
+        }
+
+        /* Main Area */
+        .main-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        header {
+            height: 70px;
+            background-color: var(--bg-card);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--shadow);
+        }
+
+        .page-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .content {
+            padding: 2rem;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .tab-pane {
+            display: none;
+        }
+
+        .tab-pane.active {
+            display: block;
+        }
+
+        /* Dashboard Cards */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .stat-card h3 {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+        }
+
+        .stat-card p {
+            font-size: 1.75rem;
+            font-weight: 700;
+        }
+
+        .stat-card .icon {
+            width: 48px;
+            height: 48px;
+            background-color: rgba(227, 24, 55, 0.1);
+            color: var(--thp-red);
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        /* Forms and Panels */
+        .panel {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            margin-bottom: 2rem;
+        }
+
+        .panel-header {
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        input, select, textarea {
+            background-color: var(--bg-app);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            padding: 0.75rem 1rem;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            outline: none;
+            transition: var(--transition);
+        }
+
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--thp-red);
+            box-shadow: 0 0 0 3px rgba(227, 24, 55, 0.15);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--radius-sm);
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: var(--transition);
+        }
+
+        .btn-primary {
+            background-color: var(--thp-red);
+            color: #FFFFFF;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--thp-red-dark);
+        }
+
+        .btn-secondary {
+            background-color: rgba(71, 85, 105, 0.1);
+            color: var(--text-primary);
+            border-color: var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background-color: rgba(71, 85, 105, 0.2);
+        }
+
+        .btn-danger {
+            background-color: #EF4444;
+            color: #FFFFFF;
+        }
+
+        .btn-icon-only {
+            width: 36px;
+            height: 36px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-card);
+            color: var(--text-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-icon-only:hover {
+            color: var(--thp-red);
+            background-color: rgba(227, 24, 55, 0.05);
+        }
+
+        /* Tables */
+        .table-responsive {
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            margin-top: 1rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th, td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: rgba(71, 85, 105, 0.05);
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        tr:hover td {
+            background-color: rgba(71, 85, 105, 0.02);
+        }
+
+        /* Warning Banners */
+        .warning-banner {
+            background-color: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #EF4444;
+            padding: 1rem;
+            border-radius: var(--radius-sm);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        /* Suggestion List */
+        .suggest-wrapper {
+            position: relative;
+        }
+
+        .suggest-box {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+            margin-top: 4px;
+        }
+
+        .suggest-item {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .suggest-item:hover {
+            background-color: rgba(227, 24, 55, 0.05);
+            color: var(--thp-red);
+        }
+
+        .suggest-item-desc {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        /* Modals */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(15, 23, 42, 0.5);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background-color: var(--bg-card);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+            width: 90%;
+            max-width: 600px;
+            padding: 2rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        .print-container {
+            display: none;
+        }
+
+        @media print {
+            aside, header, .content, .btn {
+                display: none !important;
+            }
+            .print-container {
+                display: block !important;
+                padding: 2cm;
+                font-family: "Sarabun", "TH Sarabun PSK", sans-serif;
+                font-size: 15pt;
+                color: #000000;
+            }
+            .print-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 2px solid #000000;
+                padding-bottom: 10px;
+                margin-bottom: 20px;
+            }
+            .print-logo {
+                height: 50px;
+            }
+            .memo-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-bottom: 20px;
+            }
+            .memo-table td {
+                padding: 4px;
+                border: none;
+            }
+            .item-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 20px 0;
+            }
+            .item-table th, .item-table td {
+                border: 1px solid #000000 !important;
+                padding: 6px;
+                text-align: center;
+            }
+            .item-table td.text-left {
+                text-align: left;
+            }
+            .sig-section {
+                margin-top: 50px;
+                display: flex;
+                justify-content: flex-end;
+            }
+            .sig-block {
+                width: 50%;
+                text-align: center;
+            }
+        }
+    </style>
 </head>
 <body>
 
-    <div class="app-container">
-        <!-- Sidebar Navigation (Professional Deep Blue) -->
-        <aside>
-            <div class="brand">
-                <div class="brand-logo">
-                    <svg width="32" height="24" viewBox="0 0 100 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M0 0H100L85 30H15L0 0Z" fill="#D81B60"/>
-                        <path d="M15 30H85L65 65H5L15 30Z" fill="#0F2C59"/>
-                        <path d="M5 65H65L55 80H0L5 65Z" fill="#1E3E72"/>
-                    </svg>
+    <!-- Sidebar Navigation -->
+    <aside>
+        <div class="brand">
+            <svg width="36" height="28" viewBox="0 0 100 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M0 0H100L85 30H15L0 0Z" fill="#E31837"/>
+                <path d="M15 30H85L65 65H5L15 30Z" fill="#FFFFFF"/>
+                <path d="M5 65H65L55 80H0L5 65Z" fill="#1E3A8A"/>
+            </svg>
+            <h1>บสค. 60 Portal</h1>
+        </div>
+        <div class="menu-list">
+            <div class="menu-item active" data-tab="dashboard">
+                <span class="material-symbols-outlined">dashboard</span> Dashboard
+            </div>
+            <div class="menu-item" data-tab="bsk60-form">
+                <span class="material-symbols-outlined">edit_document</span> เขียน บสค. 60 ใหม่
+            </div>
+            <div class="menu-item" data-tab="history">
+                <span class="material-symbols-outlined">history</span> ประวัติขออนุมัติ
+            </div>
+            <div class="menu-item" data-tab="inventory">
+                <span class="material-symbols-outlined">inventory</span> คุมพัสดุ (แบบที่ 2)
+            </div>
+            <div class="menu-item" data-tab="monthly-report">
+                <span class="material-symbols-outlined">analytics</span> สรุปรายเดือน (แบบที่ 3)
+            </div>
+            <div class="menu-item" data-tab="settings">
+                <span class="material-symbols-outlined">settings</span> ตั้งค่าหน่วยงาน
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content Container -->
+    <div class="main-container">
+        <header>
+            <div class="page-title" id="pageTitleText">แดชบอร์ดสรุปงบประมาณ</div>
+            <div style="display: flex; gap: 0.5rem;">
+                <button class="btn-icon-only" id="themeToggleBtn" title="สลับโหมด มืด/สว่าง">
+                    <span class="material-symbols-outlined">dark_mode</span>
+                </button>
+                <button class="btn-icon-only" id="exportBtn" title="สำรองข้อมูล">
+                    <span class="material-symbols-outlined">backup</span>
+                </button>
+                <button class="btn-icon-only" id="importBtn" title="นำเข้าข้อมูล">
+                    <span class="material-symbols-outlined">restore</span>
+                </button>
+                <input type="file" id="importFileInput" style="display: none;" accept=".json">
+            </div>
+        </header>
+
+        <div class="content">
+            
+            <!-- Tab: Dashboard -->
+            <div class="tab-pane active" id="dashboard">
+                <div class="stats-row">
+                    <div class="stat-card">
+                        <div>
+                            <h3>จำนวนคำขอเดือนนี้</h3>
+                            <p id="statCount">0 รายการ</p>
+                        </div>
+                        <div class="icon"><span class="material-symbols-outlined">assignment</span></div>
+                    </div>
+                    <div class="stat-card">
+                        <div>
+                            <h3>ยอดขออนุมัติสะสม</h3>
+                            <p id="statTotal">0.00 ฿</p>
+                        </div>
+                        <div class="icon"><span class="material-symbols-outlined">payments</span></div>
+                    </div>
+                    <div class="stat-card">
+                        <div>
+                            <h3>วงเงินสำรองคงเหลือ</h3>
+                            <p id="statBudget">30,000.00 ฿</p>
+                        </div>
+                        <div class="icon"><span class="material-symbols-outlined">account_balance_wallet</span></div>
+                    </div>
                 </div>
-                <div class="brand-text">
-                    <h1>บสค. 60 Portal</h1>
-                    <span>ฝ่ายปฏิบัติการไปรษณีย์เขต 2</span>
+
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2>โควตาวงเงินอนุมัติสะสมประจำเดือน (ตามคำสั่ง ปณท ที่ 4/2566)</h2>
+                    </div>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ประเภทจัดซื้อจัดจ้าง/วัสดุ</th>
+                                    <th>วงเงินอนุมัติสูงสุด/ครั้ง</th>
+                                    <th>วงเงินอนุมัติรวม/เดือน</th>
+                                    <th>ใช้ไปแล้วในเดือนนี้</th>
+                                    <th>คงเหลือใช้งาน</th>
+                                    <th>สถานะ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dashboardBudgetTableBody">
+                                <!-- JS -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
-            <div class="menu-list">
-                <div class="menu-item active" data-tab="dashboard">
-                    <span class="material-symbols-outlined">dashboard</span>
-                    แดชบอร์ดหลัก
-                </div>
-                <div class="menu-item" data-tab="bsk60-form">
-                    <span class="material-symbols-outlined">edit_document</span>
-                    เขียน บสค. 60 ใหม่
-                </div>
-                <div class="menu-item" data-tab="history">
-                    <span class="material-symbols-outlined">history</span>
-                    ประวัติคำขออนุมัติ
-                </div>
-                <div class="menu-item" data-tab="inventory">
-                    <span class="material-symbols-outlined">inventory</span>
-                    บัญชีควบคุมวัสดุ (แบบที่ 2)
-                </div>
-                <div class="menu-item" data-tab="monthly-report">
-                    <span class="material-symbols-outlined">analytics</span>
-                    สรุปรายเดือน (แบบที่ 3)
-                </div>
-                <div class="menu-item" data-tab="settings">
-                    <span class="material-symbols-outlined">settings</span>
-                    ตั้งค่าข้อมูลหน่วยงาน
-                </div>
-            </div>
-
-            <div class="user-badge">
-                <div class="user-avatar">ป</div>
-                <div class="user-info">
-                    <div style="font-size:0.85rem; font-weight:600; color:#FFF;" id="sideRequesterName">หน.ปณ.มาบตาพุด</div>
-                    <div style="font-size:0.7rem; color:var(--text-muted);" id="sideOfficeName">ปณ.มาบตาพุด (21150)</div>
-                </div>
-            </div>
-        </aside>
-
-        <!-- Main Workspace Viewport -->
-        <div class="viewport">
-            <!-- Topbar Header Actions -->
-            <header>
-                <div class="page-title">
-                    <h2 id="currentTabTitle">ระบบจัดการงบประมาณและข้อมูลขออนุมัติ</h2>
-                </div>
-                <div class="header-actions">
-                    <button class="btn-icon" id="themeToggle" title="สลับโหมด มืด/สว่าง">
-                        <span class="material-symbols-outlined">dark_mode</span>
-                    </button>
-                    <button class="btn-icon" id="exportData" title="สำรองข้อมูล (JSON)">
-                        <span class="material-symbols-outlined">backup</span>
-                    </button>
-                    <button class="btn-icon" id="importDataBtn" title="นำเข้าข้อมูลสำรอง">
-                        <span class="material-symbols-outlined">restore</span>
-                    </button>
-                    <input type="file" id="importFile" style="display: none;" accept=".json">
-                </div>
-            </header>
-
-            <!-- Scrollable Page Area -->
-            <main class="content-canvas">
-                
-                <!-- TAB: Dashboard -->
-                <div class="tab-pane active" id="dashboard">
-                    <div class="metric-grid">
-                        <div class="metric-card">
-                            <div class="metric-info">
-                                <h4>จำนวนคำขออนุมัติเดือนนี้</h4>
-                                <p id="statCount">0 รายการ</p>
-                            </div>
-                            <div class="metric-icon icon-blue">
-                                <span class="material-symbols-outlined">assignment</span>
-                            </div>
-                        </div>
-                        <div class="metric-card">
-                            <div class="metric-info">
-                                <h4>ยอดขออนุมัติสะสมเดือนนี้</h4>
-                                <p id="statTotal">0.00 ฿</p>
-                            </div>
-                            <div class="metric-icon icon-red">
-                                <span class="material-symbols-outlined">payments</span>
-                            </div>
-                        </div>
-                        <div class="metric-card">
-                            <div class="metric-info">
-                                <h4>งบประมาณสำรองคงเหลือ</h4>
-                                <p id="statBudget">30,000.00 ฿</p>
-                            </div>
-                            <div class="metric-icon icon-success">
-                                <span class="material-symbols-outlined">account_balance_wallet</span>
-                            </div>
-                        </div>
+            <!-- Tab: BSK60 Form -->
+            <div class="tab-pane" id="bsk60-form">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2>บันทึกข้อความขอความเห็นชอบจัดซื้อจัดจ้าง (บสค. 60)</h2>
                     </div>
 
-                    <div class="card-panel">
-                        <div class="card-header">
-                            <h2 class="card-title">
-                                <span class="material-symbols-outlined">show_chart</span> สรุปโควตาวงเงินสะสมตามคำสั่ง ปณท ที่ 4/2566
-                            </h2>
-                        </div>
-                        <div class="table-container">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>ประเภทการจัดซื้อจัดจ้าง/วัสดุ</th>
-                                        <th>วงเงินอนุมัติสูงสุดต่อครั้ง</th>
-                                        <th>วงเงินอนุมัติรวมต่อเดือน</th>
-                                        <th>ใช้ไปแล้วในเดือนนี้</th>
-                                        <th>คงเหลือใช้งาน</th>
-                                        <th>สถานะระบบ</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="budgetLimitTableBody">
-                                    <!-- Dynamic rows -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- TAB: BSK60 Form (UX Multi-Step Step Wizard Redesign) -->
-                <div class="tab-pane" id="bsk60-form">
-                    <div class="card-panel">
-                        <div class="wizard-header">
-                            <div class="wizard-step active" id="step1-indicator">
-                                <div class="step-num">1</div>
-                                <span class="step-title">ข้อมูลเอกสาร</span>
+                    <form id="bskForm">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="officeName">หน่วยงานผู้ขอ</label>
+                                <input type="text" id="officeName" value="ที่ทำการไปรษณีย์มาบตาพุด" required>
                             </div>
-                            <div class="wizard-step" id="step2-indicator">
-                                <div class="step-num">2</div>
-                                <span class="step-title">รายการสิ่งของ</span>
+                            <div class="form-group">
+                                <label for="officePhone">โทรศัพท์</label>
+                                <input type="text" id="officePhone" value="088-987-8635" required>
                             </div>
-                            <div class="wizard-step" id="step3-indicator">
-                                <div class="step-num">3</div>
-                                <span class="step-title">ลงชื่อเสนอขอ</span>
+                            <div class="form-group">
+                                <label for="docNumber">เลขที่ บสค.60 (ที่ ปณท ปข.2 (21150)/...)</label>
+                                <input type="text" id="docNumber" placeholder="ตัวอย่าง: 123/2566" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="docDate">ลงวันที่</label>
+                                <input type="date" id="docDate" required>
                             </div>
                         </div>
 
-                        <form id="bskForm">
-                            <!-- STEP 1: Document Settings -->
-                            <div class="wizard-section" id="form-step-1">
-                                <div class="input-row">
-                                    <div class="input-group">
-                                        <label for="officeName">หน่วยงานผู้ขอ</label>
-                                        <input type="text" id="officeName" value="ที่ทำการไปรษณีย์มาบตาพุด" required>
-                                    </div>
-                                    <div class="input-group">
-                                        <label for="officePhone">โทรศัพท์หน่วยงาน</label>
-                                        <input type="text" id="officePhone" value="088-987-8635" required>
-                                    </div>
-                                </div>
-                                <div class="input-row">
-                                    <div class="input-group">
-                                        <label for="docNumber">เลขที่หนังสือราชการ (ที่ ปณท ปข.2 (21150) / )</label>
-                                        <input type="text" id="docNumber" placeholder="เลขที่เอกสาร เช่น 123/2566" required>
-                                    </div>
-                                    <div class="input-group">
-                                        <label for="docDate">ลงวันที่</label>
-                                        <input type="date" id="docDate" required>
-                                    </div>
-                                </div>
-                                <div class="input-row">
-                                    <div class="input-group full-width">
-                                        <label for="itemCategory">ประเภทรายการขอซื้อ/ขอจ้าง (ตรวจสอบอำนาจอนุมัติของหัวหน้าอัตโนมัติ)</label>
-                                        <select id="itemCategory" required>
-                                            <option value="" disabled selected>-- เลือกประเภทตามคำสั่ง ปณท ที่ 4/2566 --</option>
-                                            <option value="med">ซื้อยาเวชภัณฑ์และยาประจำตู้ยา (ครั้งละไม่เกิน 1,000฿)</option>
-                                            <option value="stationery">วัสดุสิ้นเปลือง - เครื่องใช้สำนักงาน (กลุ่ม 1: 3,000฿/เดือน | กลุ่ม 2: 4,000฿/เดือน | กลุ่ม 3: 5,000฿/เดือน)</option>
-                                            <option value="electricity">วัสดุอุปกรณ์ไฟฟ้า/ประปา/สาธารณูปโภคทดแทน (ไม่เกิน 5,000฿/เดือน)</option>
-                                            <option value="household">วัสดุสิ้นเปลือง - งานบ้านที่ใช้สิ้นเปลือง (ไม่เกิน 3,000 - 5,000฿/เดือน)</option>
-                                            <option value="waste">กำจัดขยะ/สิ่งปฏิกูล/ลอกท่อ (ไม่เกิน 2,000฿/เดือน)</option>
-                                            <option value="building">ซ่อมแซมบำรุงรักษาอาคาร/สิ่งปลูกสร้าง (ไม่เกิน 5,000฿/เดือน)</option>
-                                            <option value="machine">ซ่อมแซมบำรุงรักษาเครื่องจักร/อุปกรณ์ (ไม่เกิน 5,000฿/เดือน)</option>
-                                            <option value="tool">ซ่อมแซมบำรุงรักษาเครื่องมือ/เครื่องใช้ทั่วไป (ไม่เกิน 5,000฿/เดือน)</option>
-                                            <option value="office_repair">ซ่อมแซมบำรุงรักษาเครื่องใช้สำนักงาน (ไม่เกิน 5,000฿/เดือน)</option>
-                                            <option value="car_repair">ซ่อมแซมบำรุงรักษายานพาหนะ (รถยนต์: 15,000฿ | จยย: 3,000฿ต่อคัน/เดือน)</option>
-                                            <option value="public_utility">ติดตั้ง/ซ่อมแซม/บำรุงรักษาอุปกรณ์สาธารณูปโภค (ไม่เกิน 5,000฿/เดือน)</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div style="display:flex; justify-content:flex-end; margin-top:2rem;">
-                                    <button type="button" class="btn btn-primary" onclick="goToStep(2)">ขั้นตอนถัดไป <span class="material-symbols-outlined">arrow_forward</span></button>
-                                </div>
+                        <div class="form-grid">
+                            <div class="form-group full-width">
+                                <label for="itemCategory">ประเภทวัสดุสิ้นเปลือง/บริการ (มอบอำนาจตามคำสั่ง ปณท ที่ 4/2566)</label>
+                                <select id="itemCategory" required>
+                                    <option value="" disabled selected>-- เลือกประเภทวัสดุสิ้นเปลือง/บริการ --</option>
+                                    <option value="med">ซื้อยาเวชภัณฑ์และยาประจำตู้ยา (ไม่เกิน 1,000฿/ครั้ง)</option>
+                                    <option value="stationery">วัสดุสิ้นเปลือง - เครื่องใช้สำนักงาน (ไม่เกิน 3,000 - 5,000฿/เดือน)</option>
+                                    <option value="electricity">วัสดุสิ้นเปลือง - อุปกรณ์ไฟฟ้า/ประปา/สาธารณูปโภค (ไม่เกิน 5,000฿/เดือน)</option>
+                                    <option value="household">วัสดุสิ้นเปลือง - งานบ้านงานครัว (ไม่เกิน 3,000 - 5,000฿/เดือน)</option>
+                                    <option value="waste">กำจัดขยะและสิ่งปฏิกูล/ลอกท่อระบายน้ำ (ไม่เกิน 2,000฿/เดือน)</option>
+                                    <option value="building">ซ่อมแซมและบำรุงรักษาอาคารและสิ่งปลูกสร้าง (ไม่เกิน 5,000฿/เดือน)</option>
+                                    <option value="machine">ซ่อมแซมและบำรุงรักษาเครื่องจักรและอุปกรณ์ (ไม่เกิน 5,000฿/เดือน)</option>
+                                    <option value="tool">ซ่อมแซมและบำรุงรักษาเครื่องมือเครื่องใช้ทั่วไป (ไม่เกิน 5,000฿/เดือน)</option>
+                                    <option value="office_repair">ซ่อมแซมและบำรุงรักษาเครื่องใช้สำนักงาน (ไม่เกิน 5,000฿/เดือน)</option>
+                                    <option value="car_repair">ซ่อมแซมและบำรุงรักษายานพาหนะ (รถยนต์: 15,000฿ | จยย: 3,000฿/เดือน)</option>
+                                    <option value="public_utility">ติดตั้งและซ่อมแซมบำรุงรักษาอุปกรณ์สาธารณูปโภค (ไม่เกิน 5,000฿/เดือน)</option>
+                                </select>
                             </div>
-
-                            <!-- STEP 2: Items & List (Responsive Auto-complete) -->
-                            <div class="wizard-section" id="form-step-2" style="display:none;">
-                                <div id="quotaWarning" class="alert-bar danger" style="display:none;">
-                                    <span class="material-symbols-outlined" style="font-size:24px;">error</span>
-                                    <div>
-                                        <strong style="display:block; margin-bottom:4px;">ไม่ผ่านเกณฑ์วงเงินอนุมัติ</strong>
-                                        <span id="warningMessage">ยอดซื้อขายรวมในบิลนี้เกินโควตาวงเงินอนุมัติสูงสุดของหัวหน้าตามระเบียบ!</span>
-                                    </div>
-                                </div>
-
-                                <div class="card-header" style="border:none; margin-bottom:1rem; padding:0;">
-                                    <h3 class="card-title" style="font-size:1.05rem;">รายละเอียดตารางสิ่งของจัดซื้อจัดจ้าง</h3>
-                                    <button type="button" class="btn btn-secondary" style="padding:0.5rem 1rem;" id="addItemRowBtn">
-                                        <span class="material-symbols-outlined">add</span> เพิ่มแถวพัสดุ
-                                    </button>
-                                </div>
-
-                                <div class="table-container">
-                                    <table style="min-width: 900px;">
-                                        <thead>
-                                            <tr>
-                                                <th rowspan="2" style="width: 5%; text-align: center; vertical-align: middle;">ลำดับ</th>
-                                                <th rowspan="2" style="width: 35%; text-align: center; vertical-align: middle;">รายการที่จัดซื้อ/จัดจ้าง</th>
-                                                <th colspan="3" style="width: 30%; text-align: center; border-bottom: 1px solid var(--border-color);">ซื้อ/จ้าง ครั้งล่าสุด</th>
-                                                <th colspan="2" style="width: 25%; text-align: center; border-bottom: 1px solid var(--border-color);">ซื้อ/จ้าง ครั้งนี้</th>
-                                                <th rowspan="2" style="width: 5%; text-align: center; vertical-align: middle;"></th>
-                                            </tr>
-                                            <tr>
-                                                <th style="font-size: 0.8rem; text-align: center; padding: 0.5rem;">ว.ด.ป.</th>
-                                                <th style="font-size: 0.8rem; text-align: center; padding: 0.5rem;">จำนวน/ปริมาณ</th>
-                                                <th style="font-size: 0.8rem; text-align: center; padding: 0.5rem;">จำนวนเงิน (บาท)</th>
-                                                <th style="font-size: 0.8rem; text-align: center; padding: 0.5rem;">จำนวน/ปริมาณ</th>
-                                                <th style="font-size: 0.8rem; text-align: center; padding: 0.5rem;">จำนวนเงิน (บาท)</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="formItemsTableBody">
-                                            <tr>
-                                                <td style="text-align: center;">1</td>
-                                                <td class="autosuggest-wrapper">
-                                                    <input type="text" class="item-name" placeholder="ระบุรายละเอียดสิ่งของ/บริการ (พิมพ์เพื่อค้นหาประวัติ)" required>
-                                                    <div class="suggest-list"></div>
-                                                </td>
-                                                <td><input type="date" class="item-last-date" style="padding: 0.5rem;"></td>
-                                                <td><input type="number" class="item-last-qty" placeholder="จำนวน" style="text-align: center; padding: 0.5rem;"></td>
-                                                <td><input type="number" class="item-last-price" placeholder="0.00" min="0" step="0.01" style="text-align: right; padding: 0.5rem;"></td>
-                                                <td><input type="number" class="item-qty" value="1" min="1" required style="text-align: center; padding: 0.5rem;"></td>
-                                                <td><input type="number" class="item-price" placeholder="0.00" min="0" step="0.01" required style="text-align: right; padding: 0.5rem;"></td>
-                                                <td style="text-align: center;">
-                                                    <button type="button" class="btn-icon btn-danger remove-row-btn" style="width:30px; height:30px; margin: auto;">
-                                                        <span class="material-symbols-outlined" style="font-size: 18px;">delete</span>
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                        <tfoot>
-                                            <tr>
-                                                <td colspan="6" style="text-align: right; font-weight: bold;">รวมเงินทั้งสิ้น:</td>
-                                                <td id="formTotalDisplay" style="text-align: right; font-weight: bold; font-size: 1.1rem; color: var(--thp-red);">0.00 ฿</td>
-                                                <td></td>
-                                            </tr>
-                                            <tr>
-                                                <td colspan="8" id="thaiBahtText" style="text-align: right; font-style: italic; color: var(--text-secondary);">(-)</td>
-                                            </tr>
-                                        </tfoot>
-                                    </table>
-                                </div>
-                                <div style="display:flex; justify-content:space-between; margin-top:2rem;">
-                                    <button type="button" class="btn btn-secondary" onclick="goToStep(1)"><span class="material-symbols-outlined">arrow_back</span> ย้อนกลับ</button>
-                                    <button type="button" class="btn btn-primary" onclick="goToStep(3)">ขั้นตอนถัดไป <span class="material-symbols-outlined">arrow_forward</span></button>
-                                </div>
-                            </div>
-
-                            <!-- STEP 3: Signatures & Submit -->
-                            <div class="wizard-section" id="form-step-3" style="display:none;">
-                                <div class="input-row">
-                                    <div class="input-group">
-                                        <label>การแนบเสนอราคาเสนอขาย</label>
-                                        <div style="display: flex; gap: 2rem; align-items: center; padding: 0.75rem 0;">
-                                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight:500;">
-                                                <input type="radio" name="hasQuotation" value="true" checked style="width: auto;"> มีใบเสนอราคาประกอบ
-                                            </label>
-                                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight:500;">
-                                                <input type="radio" name="hasQuotation" value="false" style="width: auto;"> ไม่มีใบเสนอราคาประกอบ
-                                            </label>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="input-row">
-                                    <div class="input-group">
-                                        <label for="requesterName">ชื่อหัวหน้าที่ทำการ (ผู้ขออนุมัติซื้อ/จ้าง)</label>
-                                        <input type="text" id="requesterName" value="นายนิพล ทรัพย์หมื่นแสน" required>
-                                    </div>
-                                    <div class="input-group">
-                                        <label for="requesterPosition">ตำแหน่งผู้มีอำนาจ</label>
-                                        <input type="text" id="requesterPosition" value="หน.ปณ.มาบตาพุด" required>
-                                    </div>
-                                </div>
-                                <div style="display:flex; justify-content:space-between; margin-top:2rem;">
-                                    <button type="button" class="btn btn-secondary" onclick="goToStep(2)"><span class="material-symbols-outlined">arrow_back</span> ย้อนกลับ</button>
-                                    <button type="submit" class="btn btn-primary" id="saveDocBtn">
-                                        <span class="material-symbols-outlined">save</span> ยืนยันบันทึกขออนุมัติ
-                                    </button>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-
-                <!-- TAB: History -->
-                <div class="tab-pane" id="history">
-                    <div class="card-panel">
-                        <div class="card-header">
-                            <h2 class="card-title">
-                                <span class="material-symbols-outlined">history</span> ประวัติบันทึกขออนุมัติจัดซื้อจัดจ้าง บสค. 60
-                            </h2>
                         </div>
-                        <div class="table-container">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>เลขที่เสนอ บสค.</th>
-                                        <th>วันที่ทำรายการ</th>
-                                        <th>ประเภทวัสดุ/บริการ</th>
-                                        <th>ใบเสนอราคา</th>
-                                        <th>จำนวนเงินรวม</th>
-                                        <th>ผู้เสนอขอ</th>
-                                        <th style="text-align: center;">จัดการเอกสาร</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="historyTableBody">
-                                    <!-- Dynamic rows -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- TAB: Inventory Management (แบบที่ 2) -->
-                <div class="tab-pane" id="inventory">
-                    <div class="card-panel">
-                        <div class="card-header">
-                            <h2 class="card-title">
-                                <span class="material-symbols-outlined">inventory_2</span> บัญชีควบคุมพัสดุคลังพัสดุ (แบบที่ 2)
-                            </h2>
-                            <button class="btn btn-primary" id="addInventoryBtn">
-                                <span class="material-symbols-outlined">add_box</span> บันทึกรับ-จ่ายวัสดุใหม่
+                        <div id="quotaWarning" class="warning-banner" style="display: none;">
+                            <span class="material-symbols-outlined">warning</span>
+                            <span id="warningMessage">ยอดเงินจัดซื้อสะสมหมวดนี้เกินวงเงินอนุมัติสูงสุดของหัวหน้า!</span>
+                        </div>
+
+                        <div class="panel-header" style="border: none; margin-bottom: 0.5rem; padding-bottom: 0;">
+                            <h3>รายการสิ่งของจัดซื้อจัดจ้าง</h3>
+                            <button type="button" class="btn btn-secondary" id="addItemBtn">
+                                <span class="material-symbols-outlined">add</span> เพิ่มแถวรายการ
                             </button>
                         </div>
-                        <div class="table-container">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>ว.ด.ป. ทำรายการ</th>
-                                        <th>รายละเอียดชื่อวัสดุ</th>
-                                        <th>เลขที่ใบเสร็จ/บสค. อ้างอิง</th>
-                                        <th>จำนวนรับเข้า</th>
-                                        <th>จำนวนจ่ายออก</th>
-                                        <th>ยอดคงเหลือคลัง</th>
-                                        <th>ผู้รับมอบสิ่งของ</th>
-                                        <th>คณะกรรมการตรวจนับ</th>
-                                        <th>ผู้ควบคุม/ตรวจสอบ</th>
-                                        <th></th>
-                                    </tr>
-                                </thead>
-                                <tbody id="inventoryTableBody">
-                                    <!-- Dynamic rows -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- TAB: Monthly Summary Report (แบบที่ 3) -->
-                <div class="tab-pane" id="monthly-report">
-                    <div class="card-panel">
-                        <div class="card-header">
-                            <h2 class="card-title">
-                                <span class="material-symbols-outlined">date_range</span> สรุปรายการจัดซื้อจัดจ้างประจำเดือน (แบบที่ 3)
-                            </h2>
-                            <div style="display:flex; gap:0.75rem; align-items:center;">
-                                <select id="reportMonthSelect" style="width:190px; padding:0.5rem;">
-                                    <!-- Injected dynamically -->
-                                </select>
-                                <button class="btn btn-primary" id="printMonthlyReportBtn">
-                                    <span class="material-symbols-outlined">print</span> พิมพ์ใบสรุปรายเดือน
-                                </button>
-                            </div>
-                        </div>
-                        <div class="table-container">
-                            <table>
+                        <div class="table-responsive">
+                            <table style="min-width: 900px;">
                                 <thead>
                                     <tr>
-                                        <th>ลำดับ</th>
-                                        <th>รายการสิ่งของที่จัดซื้อ/จัดจ้าง</th>
-                                        <th>รหัสครุภัณฑ์</th>
-                                        <th>รหัสบัญชีแยกประเภท</th>
-                                        <th>เลขที่ บสค. 60</th>
-                                        <th>คำสั่งมอบอำนาจ</th>
-                                        <th>ว.ด.ป. อนุมัติ</th>
-                                        <th>เหตุผลความจำเป็น</th>
-                                        <th>ยอดเงิน (บาท)</th>
+                                        <th rowspan="2" style="width: 5%; text-align: center; vertical-align: middle;">ลำดับ</th>
+                                        <th rowspan="2" style="width: 35%; text-align: center; vertical-align: middle;">รายการจัดซื้อ/จัดจ้าง</th>
+                                        <th colspan="3" style="width: 30%; text-align: center; border-bottom: 1px solid var(--border-color);">ซื้อ/จ้าง ครั้งล่าสุด</th>
+                                        <th colspan="2" style="width: 25%; text-align: center; border-bottom: 1px solid var(--border-color);">ซื้อ/จ้าง ครั้งนี้</th>
+                                        <th rowspan="2" style="width: 5%;"></th>
+                                    </tr>
+                                    <tr>
+                                        <th style="font-size: 0.8rem; text-align: center;">ว.ด.ป.</th>
+                                        <th style="font-size: 0.8rem; text-align: center;">จำนวน</th>
+                                        <th style="font-size: 0.8rem; text-align: center;">จำนวนเงิน (บาท)</th>
+                                        <th style="font-size: 0.8rem; text-align: center;">จำนวน</th>
+                                        <th style="font-size: 0.8rem; text-align: center;">จำนวนเงิน (บาท)</th>
                                     </tr>
                                 </thead>
-                                <tbody id="monthlyReportTableBody">
-                                    <!-- Dynamic rows -->
+                                <tbody id="formTableBody">
+                                    <tr>
+                                        <td style="text-align: center;">1</td>
+                                        <td class="suggest-wrapper">
+                                            <input type="text" class="item-name" placeholder="ระบุรายละเอียดสิ่งของ (พิมพ์เพื่อค้นหาประวัติ)" required style="width: 100%;">
+                                            <div class="suggest-box"></div>
+                                        </td>
+                                        <td><input type="date" class="item-last-date" style="width: 100%;"></td>
+                                        <td><input type="number" class="item-last-qty" placeholder="จำนวน" style="width: 100%; text-align: center;"></td>
+                                        <td><input type="number" class="item-last-price" placeholder="0.00" min="0" step="0.01" style="width: 100%; text-align: right;"></td>
+                                        <td><input type="number" class="item-qty" value="1" min="1" required style="width: 100%; text-align: center;"></td>
+                                        <td><input type="number" class="item-price" placeholder="0.00" min="0" step="0.01" required style="width: 100%; text-align: right;"></td>
+                                        <td>
+                                            <button type="button" class="btn-icon-only remove-row-btn" style="margin: auto;">
+                                                <span class="material-symbols-outlined">delete</span>
+                                            </button>
+                                        </td>
+                                    </tr>
                                 </tbody>
                                 <tfoot>
                                     <tr>
-                                        <td colspan="8" style="text-align:right; font-weight:bold;">รวมเป็นเงินทั้งสิ้นสำหรับเดือนนี้:</td>
-                                        <td id="monthlyReportTotal" style="font-weight:bold; color:var(--thp-red); text-align:right; font-size:1.1rem;">0.00 ฿</td>
+                                        <td colspan="6" style="text-align: right; font-weight: bold;">รวมเงินทั้งสิ้น:</td>
+                                        <td id="formTotalDisplay" style="text-align: right; font-weight: bold; font-size: 1.1rem; color: var(--thp-red);">0.00 ฿</td>
+                                        <td></td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="8" id="thaiBahtText" style="text-align: right; font-style: italic; color: var(--text-secondary);">(-)</td>
                                     </tr>
                                 </tfoot>
                             </table>
                         </div>
-                    </div>
-                </div>
 
-                <!-- TAB: Settings -->
-                <div class="tab-pane" id="settings">
-                    <div class="card-panel">
-                        <div class="card-header">
-                            <h2 class="card-title">
-                                <span class="material-symbols-outlined">settings</span> ตั้งค่าข้อมูลและกลุ่มหน่วยงานสังกัด
-                            </h2>
+                        <div class="form-grid" style="margin-top: 1.5rem;">
+                            <div class="form-group">
+                                <label>การแนบเสนอราคาประกอบ</label>
+                                <div style="display: flex; gap: 2rem; align-items: center; padding: 0.5rem 0;">
+                                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                        <input type="radio" name="hasQuotation" value="true" checked style="width: auto;"> มีใบเสนอราคา
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                        <input type="radio" name="hasQuotation" value="false" style="width: auto;"> ไม่มีใบเสนอราคา
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="requesterName">ชื่อหัวหน้าที่ทำการ (ผู้ขออนุมัติ)</label>
+                                <input type="text" id="requesterName" value="นายนิพล ทรัพย์หมื่นแสน" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="requesterPosition">ตำแหน่ง</label>
+                                <input type="text" id="requesterPosition" value="หน.ปณ.มาบตาพุด" required>
+                            </div>
                         </div>
-                        <form id="settingsForm">
-                            <div class="input-row">
-                                <div class="input-group">
-                                    <label for="setGroupName">กลุ่มจังหวัด/กลุ่มเขตพื้นที่สังกัด (เพดานงบรายเดือน)</label>
-                                    <select id="setGroupName" required>
-                                        <option value="group1">กลุ่มที่ 1 (ปณฝ.(ส), ปณฝ.(ก), ปณฝ.(ญ), ปณฝ.(พ) - งบวัสดุ 3,000฿/เดือน)</option>
-                                        <option value="group2" selected>กลุ่มที่ 2 (ปณภ.(ส), ปณภ.(ก), ปณภ.(ญ) - งบวัสดุ 4,000฿/เดือน)</option>
-                                        <option value="group3">กลุ่มที่ 3 (ปณภ.(พ), ปจ., ปจ.(พ), ปณศ., ปณศ.(พ) - งบวัสดุ 5,000฿/เดือน)</option>
-                                    </select>
-                                </div>
-                                <div class="input-group">
-                                    <label for="setMonthlyBudget">เพดานงบเงินรองจ่าย/เงินสำรองสะสมรายเดือนของออฟฟิศ (บาท)</label>
-                                    <input type="number" id="setMonthlyBudget" value="30000" min="0" required>
-                                </div>
-                            </div>
-                            <div style="display:flex; justify-content:flex-end;">
-                                <button type="submit" class="btn btn-primary">บันทึกค่าการตั้งค่า</button>
-                            </div>
-                        </form>
+
+                        <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1.5rem;">
+                            <button type="reset" class="btn btn-secondary">ล้างข้อมูล</button>
+                            <button type="submit" class="btn btn-primary" id="saveDocBtn">
+                                <span class="material-symbols-outlined">save</span> บันทึกคำขอ บสค.60
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Tab: History -->
+            <div class="tab-pane" id="history">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2>ประวัติใบคำขอความเห็นชอบจัดซื้อจัดจ้าง บสค. 60</h2>
+                    </div>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ที่เอกสาร บสค. 60</th>
+                                    <th>วันที่จัดทำ</th>
+                                    <th>ประเภทวัสดุ/บริการ</th>
+                                    <th>ใบเสนอราคา</th>
+                                    <th>จำนวนเงินรวม</th>
+                                    <th>หัวหน้าผู้ขออนุมัติ</th>
+                                    <th style="text-align: center;">ดำเนินการ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyTableBody">
+                                <!-- JS -->
+                            </tbody>
+                        </table>
                     </div>
                 </div>
+            </div>
 
-            </main>
+            <!-- Tab: Inventory -->
+            <div class="tab-pane" id="inventory">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2>บัญชีควบคุมพัสดุคลังพัสดุ (แบบที่ 2)</h2>
+                        <button class="btn btn-primary" id="addInventoryBtn">
+                            <span class="material-symbols-outlined">add_box</span> บันทึกรายการพัสดุคลัง
+                        </button>
+                    </div>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ว.ด.ป.</th>
+                                    <th>รายละเอียดวัสดุ</th>
+                                    <th>เลขที่ใบเสร็จ/บสค.อ้างอิง</th>
+                                    <th>จำนวนรับเข้า</th>
+                                    <th>จำนวนเบิกจ่าย</th>
+                                    <th>ยอดคงเหลือคลัง</th>
+                                    <th>ผู้รับสิ่งของ</th>
+                                    <th>คณะกรรมการตรวจนับ</th>
+                                    <th>ผู้ตรวจสอบ</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventoryTableBody">
+                                <!-- JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Monthly Report -->
+            <div class="tab-pane" id="monthly-report">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2>บัญชีสรุปรายการจัดซื้อจัดจ้างประจำเดือน (แบบที่ 3)</h2>
+                        <div style="display: flex; gap: 0.75rem; align-items: center;">
+                            <select id="reportMonthSelect" style="width: 180px; padding: 0.5rem;"></select>
+                            <button class="btn btn-primary" id="printReportBtn">
+                                <span class="material-symbols-outlined">print</span> พิมพ์รายงานสรุป
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ลำดับ</th>
+                                    <th>รายการ</th>
+                                    <th>รหัสครุภัณฑ์</th>
+                                    <th>รหัสบัญชีแยกประเภท</th>
+                                    <th>เลขที่ บสค.60</th>
+                                    <th>คำสั่งอนุญาตซื้อ/จ้าง</th>
+                                    <th>ว.ด.ป. อนุมัติ</th>
+                                    <th>เหตุผลความจำเป็น</th>
+                                    <th>จำนวนเงิน (บาท)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="monthlyReportTableBody">
+                                <!-- JS -->
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="8" style="text-align: right; font-weight: bold;">รวมเงินทั้งสิ้นประจำเดือน:</td>
+                                    <td id="monthlyReportTotal" style="font-weight: bold; color: var(--thp-red); text-align: right;">0.00 ฿</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Settings -->
+            <div class="tab-pane" id="settings">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2>ตั้งค่าระบบการเบิกจ่ายและวงเงินหน่วยงาน</h2>
+                    </div>
+                    <form id="settingsForm">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="setGroupName">กลุ่มจังหวัด/กลุ่มเขตพื้นที่สังกัด (สำหรับการกำหนดวงเงินประจำเดือน)</label>
+                                <select id="setGroupName" required>
+                                    <option value="group1">กลุ่มที่ 1 (ปณฝ.(ส), ปณฝ.(ก), ปณฝ.(ญ), ปณฝ.(พ) - วงเงินวัสดุสิ้นเปลือง 3,000฿/เดือน)</option>
+                                    <option value="group2" selected>กลุ่มที่ 2 (ปณภ.(ส), ปณภ.(ก), ปณภ.(ญ) - วงเงินวัสดุสิ้นเปลือง 4,000฿/เดือน)</option>
+                                    <option value="group3">กลุ่มที่ 3 (ปณภ.(พ), ปจ., ปจ.(พ), ปณศ., ปณศ.(พ) - วงเงินวัสดุสิ้นเปลือง 5,000฿/เดือน)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="setMonthlyBudget">ยอดงบสำรองจ่ายรายเดือนของที่ทำการ (บาท)</label>
+                                <input type="number" id="setMonthlyBudget" value="30000" min="0" required>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: flex-end;">
+                            <button type="submit" class="btn btn-primary">บันทึกค่าการตั้งค่า</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
         </div>
     </div>
 
-    <!-- INVENTORY DIALOG / MODAL -->
+    <!-- Inventory Modal -->
     <div class="modal" id="inventoryModal">
-        <div class="modal-card">
-            <div class="card-header" style="margin-bottom: 0; padding: 1.5rem;">
-                <h3 class="card-title" id="invModalTitle">บันทึกรายการบัญชีควบคุมวัสดุ</h3>
-                <button class="btn-icon" onclick="closeModal('inventoryModal')">
+        <div class="modal-content">
+            <div class="panel-header" style="margin-bottom: 0; padding-bottom: 0.5rem;">
+                <h3>บันทึกข้อมูลรายการบัญชีควบคุมวัสดุ</h3>
+                <button class="btn-icon-only" onclick="closeModal('inventoryModal')">
                     <span class="material-symbols-outlined">close</span>
                 </button>
             </div>
-            <form id="inventoryForm" style="padding: 1.5rem;">
-                <div class="input-row">
-                    <div class="input-group">
-                        <label for="invDate">ว.ด.ป. ทำรายการ</label>
+            <form id="inventoryForm" style="margin-top: 1rem;">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="invDate">ว.ด.ป.</label>
                         <input type="date" id="invDate" required>
                     </div>
-                    <div class="input-group">
+                    <div class="form-group">
                         <label for="invName">รายละเอียดชื่อวัสดุ</label>
                         <input type="text" id="invName" placeholder="ระบุประเภทพัสดุ" required>
                     </div>
                 </div>
-                <div class="input-row">
-                    <div class="input-group">
-                        <label for="invRef">เลขที่ใบจัดซื้อ/เลขอนุมัติเสนอขอ</label>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="invRef">เลขอนุมัติขอซื้อ/บสค. อ้างอิง</label>
                         <input type="text" id="invRef" placeholder="เช่น บสค.60 เลขที่ 01/2566" required>
                     </div>
-                    <div class="input-group">
-                        <label for="invAction">ประเภทการเคลื่อนไหว</label>
+                    <div class="form-group">
+                        <label for="invAction">ประเภทรายการ</label>
                         <select id="invAction" required>
-                            <option value="receive">รับเข้าคลังสินค้า</option>
-                            <option value="issue">เบิก/จ่ายออกพัสดุ</option>
+                            <option value="receive">รับเข้าพัสดุคลัง</option>
+                            <option value="issue">จ่ายออกพัสดุคลัง</option>
                         </select>
                     </div>
                 </div>
-                <div class="input-row">
-                    <div class="input-group">
+                <div class="form-grid">
+                    <div class="form-group">
                         <label for="invQty">จำนวนสิ่งของ (หน่วย)</label>
                         <input type="number" id="invQty" min="1" required value="1">
                     </div>
-                    <div class="input-group">
-                        <label for="invReceiver">ผู้รับสิ่งของ / ผู้รับมอบ</label>
+                    <div class="form-group">
+                        <label for="invReceiver">ผู้รับมอบของ</label>
                         <input type="text" id="invReceiver" placeholder="ระบุชื่อผู้รับของ">
                     </div>
                 </div>
-                <div class="input-row">
-                    <div class="input-group">
-                        <label for="invInspectors">รายชื่อคณะกรรมการตรวจรับพัสดุ</label>
-                        <input type="text" id="invInspectors" placeholder="ระบุรายชื่อคณะกรรมการ">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="invInspectors">คณะกรรมการตรวจรับ</label>
+                        <input type="text" id="invInspectors" placeholder="ระบุชื่อคณะกรรมการ">
                     </div>
-                    <div class="input-group">
-                        <label for="invAuditor">ผู้ตรวจสอบบัญชีควบคุมคลัง</label>
+                    <div class="form-group">
+                        <label for="invAuditor">ผู้ควบคุม/ตรวจสอบ</label>
                         <input type="text" id="invAuditor" placeholder="ระบุชื่อผู้ตรวจสอบคลัง">
                     </div>
                 </div>
-                <div style="display:flex; justify-content:flex-end; gap:0.75rem; margin-top:1.5rem;">
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem;">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('inventoryModal')">ยกเลิก</button>
-                    <button type="submit" class="btn btn-primary">บันทึกพัสดุ</button>
+                    <button type="submit" class="btn btn-primary">บันทึกคลัง</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- PRINT PREVIEW CONTAINER (Strict SARABUN template) -->
+    <!-- Print Preview Container -->
     <div class="print-container" id="printSection"></div>
 
     <script src="app.js"></script>
