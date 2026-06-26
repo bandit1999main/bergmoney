@@ -709,28 +709,12 @@ function printDocument(docId) {
     });
     categoryCheckboxesHtml += `</div>`;
 
-    // เพิ่มแถวว่างให้เต็มตารางตามรูปแบบจริงในกระดาษ (ให้ได้ 10 แถว)
-    const totalPrintedRows = doc.items.length;
-    const paddingRowsCount = 10 - totalPrintedRows;
-    for (let i = 0; i < paddingRowsCount; i++) {
-        itemsRowsHtml += `
-            <tr style="height: 22px;">
-                <td>${totalPrintedRows + i + 1}</td>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td></td>
-            </tr>
-        `;
-    }
+    // ตารางแสดงเฉพาะรายการที่มีข้อมูลจริงโดยไม่เผื่อแถวว่างเพิ่มเติมตามที่ผู้ใช้ร้องขอ
 
     printSection.innerHTML = `
-        <div class="print-header">
-            <img src="thailand-post-logo.png" alt="ไปรษณีย์ไทย" class="print-logo" style="height: 38px; object-fit: contain;">
-            <div style="font-weight: bold; font-size: 14pt;">บันทึกข้อความ</div>
+        <div class="print-header" style="position: relative; display: flex; align-items: center; justify-content: center; height: 50px;">
+            <img src="thailand-post-logo.png" alt="ไปรษณีย์ไทย" class="print-logo" style="height: 38px; object-fit: contain; position: absolute; left: 0; bottom: 6px;">
+            <div style="font-weight: bold; font-size: 14pt; margin-bottom: 6px;">บันทึกข้อความ</div>
         </div>
         <table class="memo-table" style="font-size: 14pt;">
             <tr>
@@ -738,18 +722,18 @@ function printDocument(docId) {
                 <td colspan="3">${doc.officeName} &nbsp;&nbsp; โทร. ${doc.officePhone}</td>
             </tr>
             <tr>
-                <td style="font-weight: bold;">วันที่:</td>
-                <td style="width: 55%;">${dateFormatted}</td>
-                <td style="width: 10%; font-weight: bold;">ที่:</td>
-                <td style="width: 20%;">${doc.docNumber || "-"}</td>
+                <td style="font-weight: bold; width: 15%;">ที่:</td>
+                <td style="width: 45%;">${doc.docNumber || "-"}</td>
+                <td style="width: 10%; font-weight: bold;">วันที่:</td>
+                <td style="width: 30%;">${dateFormatted}</td>
             </tr>
             <tr>
-                <td style="font-weight: bold;">เรื่อง:</td>
-                <td colspan="3">ขอความเห็นชอบการจัดซื้อ/จัดจ้าง (ที่มอบอำนาจการซื้อและการจ้างตามคำสั่ง ปณท ที่ 4/2566)</td>
+                <td style="font-weight: bold; border-bottom: 1px solid #000000; padding-bottom: 6px;">เรื่อง:</td>
+                <td colspan="3" style="border-bottom: 1px solid #000000; padding-bottom: 6px;">ขอความเห็นชอบการจัดซื้อ/จัดจ้าง (ที่มอบอำนาจการซื้อและการจ้างตามคำสั่ง ปณท ที่ 4/2566)</td>
             </tr>
             <tr>
-                <td style="font-weight: bold;">เรียน:</td>
-                <td colspan="3">ฝปข.2</td>
+                <td style="font-weight: bold; padding-top: 6px;">เรียน:</td>
+                <td colspan="3" style="padding-top: 6px;">ฝปข.2</td>
             </tr>
         </table>
         
