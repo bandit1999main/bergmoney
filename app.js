@@ -952,7 +952,8 @@ function printMonthlyReport() {
         <div class="sig-section" style="margin-top: 45px; display: flex; justify-content: flex-end;">
             <div class="sig-block" style="width: 45%; text-align: center; font-size: 11pt; line-height: 1.35;">
                 <p style="margin-bottom: 8px;">(...................................................)</p>
-                <p style="font-weight: bold;">${officerPosition}</p>
+                <p style="font-weight: bold; margin-bottom: 2px;">(${appState.settings.officerName || "นายนิพล ทรัพย์หมื่นแสน"})</p>
+                <p>${officerPosition}</p>
             </div>
         </div>
     `;
