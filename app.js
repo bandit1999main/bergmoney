@@ -3,26 +3,39 @@
 // สคริปต์หลักและระบบฐานข้อมูล LocalStorage
 // ----------------------------------------------------
 
-// 1. กำหนดวงเงินและงบประมาณตามระเบียบ ปณท 4/2566
 const BUDGET_RULES = {
     med: { name: "ซื้อยาเวชภัณฑ์และยาประจำตู้ยา", limitPerRequest: 1000, limitPerMonth: Infinity, code: "51020101", label: "ยาและเวชภัณฑ์" },
     stationery: { name: "วัสดุสิ้นเปลือง - เครื่องใช้สำนักงาน", limitPerRequest: Infinity, limitPerMonth: { group1: 3000, group2: 4000, group3: 5000 }, code: "51090902", label: "วัสดุสำนักงาน" },
     electricity: { name: "วัสดุอุปกรณ์ไฟฟ้า/ประปา/สาธารณูปโภค", limitPerRequest: Infinity, limitPerMonth: 5000, code: "51090505", label: "วัสดุอุปกรณ์ไฟฟ้า/ประปา" },
     household: { name: "วัสดุสิ้นเปลือง - งานบ้านที่ใช้สิ้นเปลือง", limitPerRequest: Infinity, limitPerMonth: { group1: 3000, group2: 4000, group3: 5000 }, code: "51090501", label: "วัสดุงานบ้านงานครัว" },
     waste: { name: "กำจัดขยะ/สิ่งปฏิกูล/ลอกท่อระบายน้ำ", limitPerRequest: Infinity, limitPerMonth: 2000, code: "51099909", label: "กำจัดขยะและสิ่งปฏิกูล" },
-    building: { name: "ซ่อมแซมบำรุงรักษาอาคารและสิ่งปลูกสร้าง", limitPerRequest: Infinity, limitPerMonth: 5000, code: "51070201", label: "ค่าบำรุงรักษาสิ่งปลูกสร้าง" },
-    machine: { name: "ซ่อมแซมบำรุงรักษาเครื่องจักรและอุปกรณ์", limitPerRequest: Infinity, limitPerMonth: 5000, code: "51070101", label: "ค่าซ่อมแซมบำรุงรักษาเครื่องจักร" }
+    building: { name: "ซ่อมแซมบำรุงรักษาอาคารและสิ่งปลูกสร้าง", limitPerRequest: Infinity, limitPerMonth: 5000, code: "51070201", label: "ค่าบำรักษาสิ่งปลูกสร้าง" },
+    machine: { name: "ซ่อมแซมบำรุงรักษาเครื่องจักรและอุปกรณ์", limitPerRequest: Infinity, limitPerMonth: 5000, code: "51070101", label: "ค่าซ่อมแซมบำรุงรักษาเครื่องจักร" },
+    tool: { name: "ซ่อมแซมบำรุงรักษาเครื่องมือเครื่องใช้ทั่วไป", limitPerRequest: Infinity, limitPerMonth: 5000, code: "51070199", label: "ค่าซ่อมบำรุงเครื่องมือใช้สอย" },
+    office_repair: { name: "ซ่อมแซมบำรุงรักษาเครื่องใช้สำนักงาน", limitPerRequest: Infinity, limitPerMonth: 5000, code: "51070104", label: "ซ่อมเครื่องใช้สำนักงาน" },
+    car_repair: { name: "ซ่อมแซมบำรุงรักษายานพาหนะ", limitPerRequest: { car: 15000, bike: 3000, boat: 5000, twowheel: 1000 }, limitPerMonth: Infinity, code: "51070601", label: "ค่าซ่อมบำรุงยานพาหนะ" },
+    public_utility: { name: "ติดตั้ง/ซ่อมแซมบำรุงรักษาอุปกรณ์สาธารณูปโภค", limitPerRequest: Infinity, limitPerMonth: 5000, code: "51070501", label: "ซ่อมแซมสาธารณูปโภค" }
 };
 
+let appState = {
+    settings: {
+        group: "group2",
+        monthlyBudget: 30000
+    },
+    documents: [],
+    inventory: []
+};
+
+// ----------------------------------------------------
+// โหลดข้อมูลเข้าสู่แอปพลิเคชัน
+// ----------------------------------------------------
 document.addEventListener("DOMContentLoaded", () => {
     initApp();
     setupEventHandlers();
     switchTab("dashboard");
 });
 
-// ฟังก์ชันเริ่มต้นโหลดฐานข้อมูลจาก LocalStorage
 function initApp() {
-    // ดึงข้อมูลการตั้งค่าและฐานข้อมูลเดิม
     const savedData = localStorage.getItem("thp_bergmoney_data");
     if (savedData) {
         try {
@@ -33,7 +46,26 @@ function initApp() {
         } catch (e) {
             console.error("Error loading localStorage data", e);
         }
-
+    } else {
+        // ข้อมูลจำลองหากใช้งานครั้งแรกเพื่อให้ดูสวยงาม
+        appState.documents = [
+            {
+                id: "DOC-20260601",
+                docNumber: "85/2566",
+                docDate: "2026-06-01",
+                officeName: "ที่ทำการไปรษณีย์มาบตาพุด",
+                officePhone: "088-987-8635",
+                itemCategory: "stationery",
+                hasQuotation: "true",
+                items: [
+                    { name: "กระดาษ A4 Double A 80g", lastDate: "2026-05-12", lastQty: 10, lastPrice: 135, qty: 10, price: 135 }
+                ],
+                total: 1350,
+                requesterName: "นายนิพล ทรัพย์หมื่นแสน",
+                requesterPosition: "หน.ปณ.มาบตาพุด"
+            }
+        ];
+        
         appState.inventory = [
             {
                 id: "INV-001",
@@ -46,49 +78,38 @@ function initApp() {
                 receiver: "นายสมชาย ใจดี",
                 inspectors: "คณะกรรมการจัดซื้อ ปณ.มาบตาพุด",
                 auditor: "นายนิพล ทรัพย์หมื่นแสน"
-            },
-            {
-                id: "INV-002",
-                date: "2026-06-10",
-                name: "กระดาษ A4 Double A 80g",
-                ref: "ใบเบิกพัสดุภายใน",
-                action: "issue",
-                qty: 2,
-                balance: 8,
-                receiver: "นางสาวสมศรี สวยงาม",
-                inspectors: "-",
-                auditor: "นายนิพล ทรัพย์หมื่นแสน"
             }
         ];
         saveDataToStorage();
     }
 
-    // ตั้งค่าฟอร์มให้วันที่เริ่มต้นเป็นปัจจุบัน
+    // กำหนดค่าวันที่ปัจจุบันในฟอร์ม
     const docDateInput = document.getElementById("docDate");
-    if (docDateInput) {
-        docDateInput.value = new Date().toISOString().substring(0, 10);
-    }
-    
-    // ตั้งค่าฟอร์มคลังสินค้าเป็นปัจจุบัน
-    const invDateInput = document.getElementById("invDate");
-    if (invDateInput) {
-        invDateInput.value = new Date().toISOString().substring(0, 10);
-    }
+    if (docDateInput) docDateInput.value = new Date().toISOString().substring(0, 10);
 
-    // ใส่ตัวเลือกเดือนในหน้าสรุปรายเดือน
+    const invDateInput = document.getElementById("invDate");
+    if (invDateInput) invDateInput.value = new Date().toISOString().substring(0, 10);
+
+    // กำหนดชื่อโปรไฟล์ในแถบ Sidebar
+    document.getElementById("sideRequesterName").innerText = appState.documents[0]?.requesterName || "หน.ปณ.มาบตาพุด";
+    document.getElementById("sideOfficeName").innerText = appState.documents[0]?.officeName || "ที่ทำการไปรษณีย์มาบตาพุด";
+
     renderMonthSelectOptions();
-    
-    // อัปเดตข้อมูลบนหน้าจอทั้งหมด
     updateUIElements();
+    
+    // ตั้งค่าฟังก์ชันป้อนรายละเอียดชื่อเพื่อสืบค้นของแถวแรกเริ่มต้น
+    bindAutoSuggest(document.querySelector("#formItemsTableBody tr"));
 }
 
 function saveDataToStorage() {
     localStorage.setItem("thp_bergmoney_data", JSON.stringify(appState));
 }
 
-// 3. จัดการสวิตช์แท็บและการโต้ตอบของผู้ใช้
+// ----------------------------------------------------
+// ผูกเหตุการณ์และการโต้ตอบต่างๆ
+// ----------------------------------------------------
 function setupEventHandlers() {
-    // Menu Tab Navigation
+    // แถบนำทางด้านข้าง
     document.querySelectorAll("aside .menu-item").forEach(item => {
         item.addEventListener("click", (e) => {
             const tabId = e.currentTarget.getAttribute("data-tab");
@@ -96,15 +117,15 @@ function setupEventHandlers() {
         });
     });
 
-    // Theme toggle
+    // ปุ่มเปลี่ยนธีมสลับ มืด/สว่าง
     document.getElementById("themeToggle").addEventListener("click", () => {
         const body = document.body;
-        body.classList.toggle("light-theme");
-        const isLight = body.classList.contains("light-theme");
-        document.getElementById("themeToggle").querySelector("span").innerText = isLight ? "light_mode" : "dark_mode";
+        body.classList.toggle("dark-theme");
+        const isDark = body.classList.contains("dark-theme");
+        document.getElementById("themeToggle").querySelector("span").innerText = isDark ? "light_mode" : "dark_mode";
     });
 
-    // Setup BskForm validation and total calculation
+    // การป้อนข้อมูลตารางจัดซื้อ
     const bskForm = document.getElementById("bskForm");
     bskForm.addEventListener("submit", handleBskSubmit);
     
@@ -112,36 +133,81 @@ function setupEventHandlers() {
     document.getElementById("itemCategory").addEventListener("change", checkQuotaLimits);
     document.getElementById("formItemsTableBody").addEventListener("input", handleTableInput);
 
-    // Setup Inventory Modal Actions
+    // Dialog จัดเก็บพัสดุคลัง
     document.getElementById("addInventoryBtn").addEventListener("click", () => openModal("inventoryModal"));
     document.getElementById("inventoryForm").addEventListener("submit", handleInventorySubmit);
 
-    // Settings Submit
+    // ฟอร์มการตั้งค่า
     document.getElementById("settingsForm").addEventListener("submit", handleSettingsSubmit);
 
-    // Export & Import Backup Data
+    // การจัดการ Backup
     document.getElementById("exportData").addEventListener("click", exportBackupData);
     document.getElementById("importDataBtn").addEventListener("click", () => {
         document.getElementById("importFile").click();
     });
     document.getElementById("importFile").addEventListener("change", importBackupData);
 
-    // Month Report update trigger
-    document.getElementById("reportMonthSelect").addEventListener("change", () => {
-        renderMonthlyReportTable();
-    });
+    document.getElementById("reportMonthSelect").addEventListener("change", renderMonthlyReportTable);
     document.getElementById("printMonthlyReportBtn").addEventListener("click", printMonthlyReport);
 }
+
+// ----------------------------------------------------
+// ระบบ Step Wizard ปรับแต่ง UX
+// ----------------------------------------------------
+window.goToStep = function(stepNum) {
+    // ตรวจสอบความสมบูรณ์ของฟิลด์ก่อนก้าวถัดไป
+    if (stepNum === 2) {
+        const officeName = document.getElementById("officeName").value;
+        const docNumber = document.getElementById("docNumber").value;
+        const category = document.getElementById("itemCategory").value;
+        
+        if (!officeName || !docNumber || !category) {
+            alert("กรุณากรอกข้อมูลในขั้นตอนที่ 1 ให้สมบูรณ์ รวมถึงการเลือกประเภทจัดซื้อ/จ้าง");
+            return;
+        }
+    }
+    
+    if (stepNum === 3) {
+        // คำนวณราคายอดรวมสุทธิ และตรวจสอบวงเงินก่อนไปขั้นตอนสุดท้าย
+        calculateFormTotal();
+    }
+
+    // ซ่อนเซกชันทั้งหมด
+    document.querySelectorAll(".wizard-section").forEach(sec => sec.style.display = "none");
+    document.getElementById(`form-step-${stepNum}`).style.display = "block";
+
+    // อัปเดตแถบระบุความก้าวหน้า (Indicators)
+    document.querySelectorAll(".wizard-step").forEach((step, i) => {
+        step.classList.remove("active", "completed");
+        const idx = i + 1;
+        if (idx === stepNum) {
+            step.classList.add("active");
+        } else if (idx < stepNum) {
+            step.classList.add("completed");
+        }
+    });
+};
 
 function switchTab(tabId) {
     document.querySelectorAll("aside .menu-item").forEach(item => {
         item.classList.toggle("active", item.getAttribute("data-tab") === tabId);
     });
-    document.querySelectorAll(".main-content .tab-pane").forEach(pane => {
+    document.querySelectorAll(".viewport .tab-pane").forEach(pane => {
         pane.classList.toggle("active", pane.id === tabId);
     });
 
-    // รีเฟรชข้อมูลตามหน้าแท็บที่เลือก
+    // กำหนดชื่อหัวแท็บแสดงผล
+    const titles = {
+        "dashboard": "แดชบอร์ดสรุปยอดขออนุมัติและวงเงิน",
+        "bsk60-form": "สร้างบันทึกข้อความขออนุมัติ บสค. 60 โฉมใหม่",
+        "history": "ประวัติหนังสือขออนุมัติจัดซื้อจัดจ้างย้อนหลัง",
+        "inventory": "บัญชีควบคุมพัสดุ (แบบที่ 2) คลังพัสดุ",
+        "monthly-report": "สรุปรายการจัดซื้อจัดจ้างส่ง ฝปข.2 ประจําเดือน (แบบที่ 3)",
+        "settings": "ตั้งค่าข้อมูลที่ทำการไปรษณีย์และรหัสสังกัด"
+    };
+    document.getElementById("currentTabTitle").innerText = titles[tabId] || "ระบบจัดการงบประมาณ";
+
+    // รีเฟรชข้อมูลเมื่อสลับแท็บ
     if (tabId === "dashboard") {
         updateUIElements();
     } else if (tabId === "history") {
@@ -150,187 +216,107 @@ function switchTab(tabId) {
         renderInventoryTable();
     } else if (tabId === "monthly-report") {
         renderMonthlyReportTable();
-    } else if (tabId === "settings") {
-        document.getElementById("setGroupName").value = appState.settings.group;
-        document.getElementById("setMonthlyBudget").value = appState.settings.monthlyBudget;
     }
 }
 
-// 4. ระบบการคำนวณ ตรวจสอบวงเงิน และสรุปสถิติ (Dashboard)
-function updateUIElements() {
-    const currentMonthStr = new Date().toISOString().substring(0, 7); // yyyy-mm
-    
-    // กรองประวัติคำขอในเดือนปัจจุบัน
-    const currentMonthDocs = appState.documents.filter(doc => doc.docDate.startsWith(currentMonthStr));
-    const totalSpentThisMonth = currentMonthDocs.reduce((sum, doc) => sum + doc.total, 0);
-    
-    // อัปเดตสถิติด้านบนแดชบอร์ด
-    document.getElementById("statCount").innerText = `${currentMonthDocs.length} รายการ`;
-    document.getElementById("statTotal").innerText = `${totalSpentThisMonth.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿`;
-    
-    const remainingOfficeBudget = appState.settings.monthlyBudget - totalSpentThisMonth;
-    const statBudgetElement = document.getElementById("statBudget");
-    statBudgetElement.innerText = `${remainingOfficeBudget.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿`;
-    statBudgetElement.style.color = remainingOfficeBudget < 2000 ? "var(--danger)" : "var(--success)";
+// ----------------------------------------------------
+// ระบบ Auto-complete / Auto-suggest ค้นหาประวัติ
+// ----------------------------------------------------
+function bindAutoSuggest(row) {
+    const nameInput = row.querySelector(".item-name");
+    const suggestList = row.querySelector(".suggest-list");
 
-    // เรนเดอร์ตารางสรุปงบประมาณและตรวจสอบโควตา
-    renderBudgetQuotaTable(currentMonthStr);
-}
+    nameInput.addEventListener("focus", () => showSuggestions(nameInput, suggestList));
+    nameInput.addEventListener("input", () => showSuggestions(nameInput, suggestList));
 
-function renderBudgetQuotaTable(currentMonthStr) {
-    const tbody = document.getElementById("budgetLimitTableBody");
-    tbody.innerHTML = "";
-
-    const userGroup = appState.settings.group;
-
-    Object.keys(BUDGET_RULES).forEach(key => {
-        const rule = BUDGET_RULES[key];
-        
-        // คำนวณเงินอนุมัติสูงสุดต่อครั้ง
-        let limitPerRequestText = "-";
-        if (rule.limitPerRequest) {
-            if (typeof rule.limitPerRequest === "object") {
-                limitPerRequestText = `รถยนต์: ${rule.limitPerRequest.car.toLocaleString()}฿ / จยย.: ${rule.limitPerRequest.bike.toLocaleString()}฿`;
-            } else {
-                limitPerRequestText = `${rule.limitPerRequest.toLocaleString()} ฿`;
-            }
+    // ปิดเมื่อคลิกด้านนอก
+    document.addEventListener("click", (e) => {
+        if (!row.contains(e.target)) {
+            suggestList.style.display = "none";
         }
-
-        // คำนวณเงินสูงสุดรวมต่อเดือน
-        let monthlyLimit = 0;
-        let limitPerMonthText = "-";
-        if (rule.limitPerMonth) {
-            if (typeof rule.limitPerMonth === "object") {
-                monthlyLimit = rule.limitPerMonth[userGroup];
-                limitPerMonthText = `${monthlyLimit.toLocaleString()} ฿ (กลุ่มที่ทำการ)`;
-            } else {
-                monthlyLimit = rule.limitPerMonth;
-                limitPerMonthText = `${monthlyLimit.toLocaleString()} ฿`;
-            }
-        }
-
-        // ค้นหาการใช้จ่ายจริงเดือนนี้ในหมวดนี้
-        const spentThisMonth = appState.documents
-            .filter(doc => doc.docDate.startsWith(currentMonthStr) && doc.itemCategory === key)
-            .reduce((sum, doc) => sum + doc.total, 0);
-
-        const remaining = monthlyLimit ? (monthlyLimit - spentThisMonth) : Infinity;
-        let remainingText = remaining === Infinity ? "ไม่จำกัดงบรายเดือน" : `${remaining.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿`;
-        
-        let statusBadge = `<span style="color:var(--success); font-weight:600;">พร้อมใช้งาน</span>`;
-        if (remaining <= 0 && remaining !== Infinity) {
-            statusBadge = `<span style="color:var(--danger); font-weight:600;">เต็มวงเงินแล้ว</span>`;
-        } else if (remaining < 1000 && remaining !== Infinity) {
-            statusBadge = `<span style="color:var(--warning); font-weight:600;">ใกล้เต็ม</span>`;
-        }
-
-        const row = `
-            <tr>
-                <td style="font-weight:600;">${rule.name} <span style="font-size:0.75rem; color:var(--text-secondary); display:block;">รหัสบัญชี: ${rule.code}</span></td>
-                <td>${limitPerRequestText}</td>
-                <td>${limitPerMonthText}</td>
-                <td style="font-weight:500;">${spentThisMonth.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿</td>
-                <td style="font-weight:600; color: ${remaining <= 0 ? 'var(--danger)' : 'inherit'}">${remainingText}</td>
-                <td>${statusBadge}</td>
-            </tr>
-        `;
-        tbody.insertAdjacentHTML("beforeend", row);
     });
 }
 
+function showSuggestions(input, listElement) {
+    const val = input.value.trim().toLowerCase();
+    listElement.innerHTML = "";
+    
+    // ดึงประวัติเฉพาะชื่อที่ไม่ซ้ำกัน
+    const itemsHistory = [];
+    const seen = new Set();
+
+    // 1. ดึงจากรายการเอกสารก่อนหน้า
+    appState.documents.forEach(doc => {
+        doc.items.forEach(item => {
+            const name = item.name.trim();
+            if (!seen.has(name)) {
+                seen.add(name);
+                itemsHistory.push({
+                    name: name,
+                    lastDate: doc.docDate,
+                    lastQty: item.qty,
+                    lastPrice: item.price
+                });
+            }
+        });
+    });
+
+    // 2. ดึงจากคลังพัสดุ
+    appState.inventory.forEach(inv => {
+        const name = inv.name.trim();
+        if (!seen.has(name) && inv.action === "receive") {
+            seen.add(name);
+            itemsHistory.push({
+                name: name,
+                lastDate: inv.date,
+                lastQty: inv.qty,
+                lastPrice: 0 // จะพยายามดึงราคาจากเอกสารอื่น
+            });
+        }
+    });
+
+    // กรองลิสต์รายการตามค่าที่พิมพ์ค้นหา
+    const filtered = itemsHistory.filter(i => i.name.toLowerCase().includes(val));
+
+    if (filtered.length === 0) {
+        listElement.style.display = "none";
+        return;
+    }
+
+    filtered.forEach(item => {
+        const div = document.createElement("div");
+        div.className = "suggest-item";
+        
+        const dateFormatted = new Date(item.lastDate).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" });
+        div.innerHTML = `
+            <strong>${item.name}</strong>
+            <span class="suggest-item-desc">ประวัติล่าสุด: ${dateFormatted} | ${item.lastQty} ชิ้น${item.lastPrice ? ` | ${item.lastPrice}฿` : ''}</span>
+        `;
+
+        div.addEventListener("click", () => {
+            input.value = item.name;
+            const row = input.closest("tr");
+            row.querySelector(".item-last-date").value = item.lastDate;
+            row.querySelector(".item-last-qty").value = item.lastQty;
+            row.querySelector(".item-last-price").value = item.lastPrice || 0;
+            
+            listElement.style.display = "none";
+            calculateFormTotal();
+        });
+
+        listElement.appendChild(div);
+    });
+
+    listElement.style.display = "block";
+}
+
+// ----------------------------------------------------
+// ระบบคำนวณ ยอดรวม และการตรวจสอบวงเงินอนุมัติ
+// ----------------------------------------------------
 function handleTableInput(e) {
     if (e.target.classList.contains("item-price") || e.target.classList.contains("item-qty")) {
         calculateFormTotal();
     }
-    
-    // ระบบ Auto-complete เมื่อคีย์ชื่อวัสดุแล้วดึงข้อมูล ซื้อ/จ้าง ครั้งล่าสุด
-    if (e.target.classList.contains("item-name")) {
-        const inputName = e.target.value.trim();
-        const row = e.target.closest("tr");
-        
-        if (inputName.length > 1) {
-            // 1. ค้นหาจากประวัติคลังสินค้า (Inventory) ก่อน
-            const matchedInv = appState.inventory
-                .filter(item => item.name.toLowerCase().includes(inputName.toLowerCase()) && item.action === "receive")
-                .sort((a, b) => new Date(b.date) - new Date(a.date)); // ล่าสุดขึ้นก่อน
-                
-            if (matchedInv.length > 0) {
-                const latest = matchedInv[0];
-                row.querySelector(".item-last-date").value = latest.date;
-                row.querySelector(".item-last-qty").value = latest.qty;
-                // คำนวณหาค่าเฉลี่ยหรือสืบค้นราคาจากเอกสารขอซื้อ (Doc) หากมี
-                const matchedDoc = appState.documents.find(d => d.items.some(i => i.name === latest.name));
-                if (matchedDoc) {
-                    const docItem = matchedDoc.items.find(i => i.name === latest.name);
-                    row.querySelector(".item-last-price").value = docItem.price;
-                }
-                return;
-            }
-            
-            // 2. ค้นหาจากประวัติเอกสาร บสค.60 เก่า (Documents)
-            const matchedDocItem = [];
-            appState.documents.forEach(doc => {
-                doc.items.forEach(item => {
-                    if (item.name.toLowerCase().includes(inputName.toLowerCase())) {
-                        matchedDocItem.push({
-                            date: doc.docDate,
-                            qty: item.qty,
-                            price: item.price
-                        });
-                    }
-                });
-            });
-            
-            if (matchedDocItem.length > 0) {
-                matchedDocItem.sort((a, b) => new Date(b.date) - new Date(a.date));
-                const latest = matchedDocItem[0];
-                row.querySelector(".item-last-date").value = latest.date;
-                row.querySelector(".item-last-qty").value = latest.qty;
-                row.querySelector(".item-last-price").value = latest.price;
-            }
-        }
-    }
-}
-
-function addFormItemRow() {
-    const tbody = document.getElementById("formItemsTableBody");
-    const rowCount = tbody.querySelectorAll("tr").length + 1;
-    const newRow = `
-        <tr>
-            <td style="text-align: center;">${rowCount}</td>
-            <td><input type="text" class="item-name" placeholder="ระบุรายละเอียดสิ่งของ/บริการ" required></td>
-            <td><input type="date" class="item-last-date" style="padding: 0.5rem;"></td>
-            <td><input type="number" class="item-last-qty" placeholder="จำนวน" style="text-align: center; padding: 0.5rem;"></td>
-            <td><input type="number" class="item-last-price" placeholder="0.00" min="0" step="0.01" style="text-align: right; padding: 0.5rem;"></td>
-            <td><input type="number" class="item-qty" value="1" min="1" required style="text-align: center; padding: 0.5rem;"></td>
-            <td><input type="number" class="item-price" placeholder="0.00" min="0" step="0.01" required style="text-align: right; padding: 0.5rem;"></td>
-            <td style="text-align: center;">
-                <button type="button" class="btn-icon btn-danger remove-row-btn" style="width:30px; height:30px; margin: auto;">
-                    <span class="material-symbols-outlined" style="font-size: 18px;">delete</span>
-                </button>
-            </td>
-        </tr>
-    `;
-    tbody.insertAdjacentHTML("beforeend", newRow);
-    
-    // ผูก Event ปุ่มลบแถว
-    const rows = tbody.querySelectorAll("tr");
-    rows[rows.length - 1].querySelector(".remove-row-btn").addEventListener("click", (e) => {
-        e.currentTarget.closest("tr").remove();
-        reindexFormTable();
-        calculateFormTotal();
-    });
-    
-    calculateFormTotal();
-}
-
-
-
-function reindexFormTable() {
-    const rows = document.querySelectorAll("#formItemsTableBody tr");
-    rows.forEach((row, i) => {
-        row.querySelector("td:first-child").innerText = i + 1;
-    });
 }
 
 function calculateFormTotal() {
@@ -346,7 +332,6 @@ function calculateFormTotal() {
     document.getElementById("formTotalDisplay").innerText = `${total.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿`;
     document.getElementById("thaiBahtText").innerText = `(${arabicToThaiBaht(total)})`;
     
-    // ตรวจสอบเงื่อนไขการใช้วงเงินเรียลไทม์
     checkQuotaLimits();
 }
 
@@ -370,16 +355,14 @@ function checkQuotaLimits() {
     // 1. ตรวจสอบวงเงินต่อครั้ง
     if (rule.limitPerRequest) {
         if (typeof rule.limitPerRequest === "object") {
-            // หมวดยานพาหนะ (ตรวจสอบตามประเภทที่กำหนดเป็นคู่มือ)
             message = `กรุณาตรวจสอบว่ายอดจัดซื้อจัดจ้างรายคันไม่เกินวงเงินอนุมัติครั้งละ (รถยนต์ 15,000฿ / จยย. 3,000฿)`;
-            // ตรวจสอบกับชนิดวัสดุและบล็อคถ้าเกินกรณีทั่วไป
         } else if (total > rule.limitPerRequest) {
             isOverLimit = true;
-            message = `การขอซื้อ/จ้างรายการนี้เกินขีดจำกัดอนุมัติสูงสุดครั้งละ ${rule.limitPerRequest.toLocaleString()} บาทตามคำสั่ง ปณท ที่ 4/2566`;
+            message = `ยอดเงินรวม ${total.toLocaleString()} ฿ เกินขีดจำกัดอนุมัติสูงสุดต่อครั้งที่ ${rule.limitPerRequest.toLocaleString()} ฿ ของประเภท ${rule.name}`;
         }
     }
 
-    // 2. ตรวจสอบวงเงินสูงสุดต่อเดือน
+    // 2. ตรวจสอบงบประมาณสะสมรายเดือน
     if (rule.limitPerMonth && !isOverLimit) {
         let monthlyLimit = typeof rule.limitPerMonth === "object" ? rule.limitPerMonth[group] : rule.limitPerMonth;
         const currentMonthStr = document.getElementById("docDate").value.substring(0, 7);
@@ -389,7 +372,7 @@ function checkQuotaLimits() {
 
         if (spentThisMonth + total > monthlyLimit) {
             isOverLimit = true;
-            message = `งบประมาณรายเดือนรวมของหมวดนี้สะสมในเดือนปัจจุบันเกินขีดจำกัดอนุมัติสูงสุดต่อเดือนที่ ${monthlyLimit.toLocaleString()} บาท`;
+            message = `ยอดเบิกสะสมในเดือนนี้จะเท่ากับ ${(spentThisMonth + total).toLocaleString()} ฿ ซึ่งเกินขีดจำกัดอนุมัติรายเดือนที่ ${monthlyLimit.toLocaleString()} ฿`;
         }
     }
 
@@ -408,26 +391,67 @@ function checkQuotaLimits() {
         saveDocBtn.disabled = false;
         saveDocBtn.style.opacity = "1";
         saveDocBtn.style.cursor = "pointer";
-        saveDocBtn.innerHTML = `<span class="material-symbols-outlined">save</span> บันทึกคำขออนุมัติ`;
+        saveDocBtn.innerHTML = `<span class="material-symbols-outlined">save</span> ยืนยันบันทึกขออนุมัติ`;
     }
 }
-// 6. ระบบบันทึก บสค. 60 และบันทึกประวัติย้อนหลัง
+
+function addFormItemRow() {
+    const tbody = document.getElementById("formItemsTableBody");
+    const rowCount = tbody.querySelectorAll("tr").length + 1;
+    const newRow = `
+        <tr>
+            <td style="text-align: center;">${rowCount}</td>
+            <td class="autosuggest-wrapper">
+                <input type="text" class="item-name" placeholder="ระบุรายละเอียดสิ่งของ/บริการ (พิมพ์เพื่อค้นหาประวัติ)" required>
+                <div class="suggest-list"></div>
+            </td>
+            <td><input type="date" class="item-last-date" style="padding: 0.5rem;"></td>
+            <td><input type="number" class="item-last-qty" placeholder="จำนวน" style="text-align: center; padding: 0.5rem;"></td>
+            <td><input type="number" class="item-last-price" placeholder="0.00" min="0" step="0.01" style="text-align: right; padding: 0.5rem;"></td>
+            <td><input type="number" class="item-qty" value="1" min="1" required style="text-align: center; padding: 0.5rem;"></td>
+            <td><input type="number" class="item-price" placeholder="0.00" min="0" step="0.01" required style="text-align: right; padding: 0.5rem;"></td>
+            <td style="text-align: center;">
+                <button type="button" class="btn-icon btn-danger remove-row-btn" style="width:30px; height:30px; margin: auto;">
+                    <span class="material-symbols-outlined" style="font-size: 18px;">delete</span>
+                </button>
+            </td>
+        </tr>
+    `;
+    tbody.insertAdjacentHTML("beforeend", newRow);
+    
+    const rows = tbody.querySelectorAll("tr");
+    const latestRow = rows[rows.length - 1];
+    
+    latestRow.querySelector(".remove-row-btn").addEventListener("click", (e) => {
+        e.currentTarget.closest("tr").remove();
+        reindexFormTable();
+        calculateFormTotal();
+    });
+
+    bindAutoSuggest(latestRow);
+    calculateFormTotal();
+}
+
+function reindexFormTable() {
+    const rows = document.querySelectorAll("#formItemsTableBody tr");
+    rows.forEach((row, i) => {
+        row.querySelector("td:first-child").innerText = i + 1;
+    });
+}
+
+// ----------------------------------------------------
+// การดำเนินการส่งและจัดเก็บข้อมูลประวัติ (บสค. 60)
+// ----------------------------------------------------
 function handleBskSubmit(e) {
     e.preventDefault();
     
     const category = document.getElementById("itemCategory").value;
-    if (!category) {
-        alert("กรุณาเลือกประเภทวัสดุสิ้นเปลือง/บริการด้วยครับ");
-        return;
-    }
-
     const docDate = document.getElementById("docDate").value;
     const officeName = document.getElementById("officeName").value;
     const officePhone = document.getElementById("officePhone").value;
     const docNumber = document.getElementById("docNumber").value;
     const hasQuotation = document.querySelector('input[name="hasQuotation"]:checked').value;
     
-    // โหลดรายละเอียดตาราง
     const items = [];
     let total = 0;
     const rows = document.querySelectorAll("#formItemsTableBody tr");
@@ -439,14 +463,7 @@ function handleBskSubmit(e) {
         const qty = parseFloat(row.querySelector(".item-qty").value) || 1;
         const price = parseFloat(row.querySelector(".item-price").value) || 0;
         
-        items.push({ 
-            name, 
-            lastDate, 
-            lastQty, 
-            lastPrice, 
-            qty, 
-            price 
-        });
+        items.push({ name, lastDate, lastQty, lastPrice, qty, price });
         total += qty * price;
     });
 
@@ -468,16 +485,21 @@ function handleBskSubmit(e) {
     };
 
     appState.documents.push(newDoc);
+    
+    // บันทึกและดึงโปรไฟล์ไปอัปเดตแถบด้านข้าง
     saveDataToStorage();
 
-    alert("บันทึกข้อมูลขออนุมัติ บสค. 60 สำเร็จแล้ว!");
+    alert("บันทึกข้อมูลคำขออนุมัติ บสค. 60 ลงฐานข้อมูลสำเร็จ!");
     
-    // รีเซ็ตฟอร์ม
+    // รีเซ็ตฟอร์มกลับไปหน้าหลัก
     document.getElementById("bskForm").reset();
     document.getElementById("formItemsTableBody").innerHTML = `
         <tr>
             <td style="text-align: center;">1</td>
-            <td><input type="text" class="item-name" placeholder="ระบุรายละเอียดสิ่งของ/บริการ" required></td>
+            <td class="autosuggest-wrapper">
+                <input type="text" class="item-name" placeholder="ระบุรายละเอียดสิ่งของ/บริการ (พิมพ์เพื่อค้นหาประวัติ)" required>
+                <div class="suggest-list"></div>
+            </td>
             <td><input type="date" class="item-last-date" style="padding: 0.5rem;"></td>
             <td><input type="number" class="item-last-qty" placeholder="จำนวน" style="text-align: center; padding: 0.5rem;"></td>
             <td><input type="number" class="item-last-price" placeholder="0.00" min="0" step="0.01" style="text-align: right; padding: 0.5rem;"></td>
@@ -490,87 +512,43 @@ function handleBskSubmit(e) {
             </td>
         </tr>
     `;
+    bindAutoSuggest(document.querySelector("#formItemsTableBody tr"));
     calculateFormTotal();
+    
+    // สลับไปยังหน้า 1 ของฟอร์มเตรียมความพร้อม
+    goToStep(1);
     switchTab("history");
 }
 
-function renderHistoryTable() {
-    const tbody = document.getElementById("historyTableBody");
-    tbody.innerHTML = "";
-
-    if (appState.documents.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-secondary);">ไม่มีประวัติการบันทึกขออนุมัติ</td></tr>`;
-        return;
-    }
-
-    appState.documents.forEach(doc => {
-        const cat = BUDGET_RULES[doc.itemCategory];
-        const dateFormatted = new Date(doc.docDate).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" });
-        const quotationBadge = doc.hasQuotation === "true" 
-            ? `<span style="background:rgba(16,185,129,0.15); color:var(--success); padding:3px 8px; border-radius:12px; font-size:0.75rem;">มี</span>`
-            : `<span style="background:rgba(239,68,68,0.15); color:var(--danger); padding:3px 8px; border-radius:12px; font-size:0.75rem;">ไม่มี</span>`;
-
-        const row = `
-            <tr>
-                <td>บสค. 60 เลขที่ ${doc.docNumber}</td>
-                <td>${dateFormatted}</td>
-                <td>${cat ? cat.name : "ทั่วไป"}</td>
-                <td>${quotationBadge}</td>
-                <td style="font-weight:600; color:var(--thp-red);">${doc.total.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿</td>
-                <td>${doc.requesterName}</td>
-                <td>
-                    <div class="action-group" style="justify-content:center;">
-                        <button class="btn btn-secondary" style="padding: 4px 10px; font-size:0.8rem;" onclick="printDocument('${doc.id}')">
-                            <span class="material-symbols-outlined" style="font-size:16px;">print</span> พิมพ์
-                        </button>
-                        <button class="btn btn-danger" style="padding: 4px 10px; font-size:0.8rem;" onclick="deleteDocument('${doc.id}')">
-                            <span class="material-symbols-outlined" style="font-size:16px;">delete</span> ลบ
-                        </button>
-                    </div>
-                </td>
-            </tr>
-        `;
-        tbody.insertAdjacentHTML("beforeend", row);
-    });
-}
-
-function deleteDocument(docId) {
-    if (confirm("คุณแน่ใจว่าต้องการลบเอกสารขออนุมัติชิ้นนี้ใช่ไหม?")) {
-        appState.documents = appState.documents.filter(doc => doc.id !== docId);
-        saveDataToStorage();
-        renderHistoryTable();
-    }
-}
-
-// 7. บัญชีควบคุมวัสดุ (แบบที่ 2)
+// ----------------------------------------------------
+// ระบบบัญชีคลังวัสดุ (แบบที่ 2)
+// ----------------------------------------------------
 function renderInventoryTable() {
     const tbody = document.getElementById("inventoryTableBody");
     tbody.innerHTML = "";
 
     if (appState.inventory.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; color:var(--text-secondary);">ไม่มีข้อมูลสินค้าคงเหลือคลังพัสดุ</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; color:var(--text-secondary);">ไม่มีข้อมูลประวัติคลังสินค้าคงเหลือ</td></tr>`;
         return;
     }
 
     appState.inventory.forEach(inv => {
         const dateFormatted = new Date(inv.date).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" });
-        const actionText = inv.action === "receive" 
-            ? `<span style="color:var(--success); font-weight:600;">+ รับเข้า (${inv.qty})</span>` 
-            : `<span style="color:var(--warning); font-weight:600;">- เบิกออก (${inv.qty})</span>`;
+        const isReceive = inv.action === "receive";
 
         const row = `
             <tr>
                 <td>${dateFormatted}</td>
-                <td style="font-weight:600;">${inv.name}</td>
+                <td style="font-weight:600; color:var(--thp-blue-light);">${inv.name}</td>
                 <td>${inv.ref}</td>
-                <td>${inv.action === 'receive' ? inv.qty : '-'}</td>
-                <td>${inv.action === 'issue' ? inv.qty : '-'}</td>
-                <td style="font-weight:600;">${inv.balance}</td>
+                <td style="color:var(--success); font-weight:600;">${isReceive ? `+ ${inv.qty}` : '-'}</td>
+                <td style="color:var(--warning); font-weight:600;">${!isReceive ? `- ${inv.qty}` : '-'}</td>
+                <td style="font-weight:600; color:var(--text-primary);">${inv.balance}</td>
                 <td>${inv.receiver || "-"}</td>
-                <td style="font-size:0.8rem; max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${inv.inspectors || "-"}</td>
+                <td>${inv.inspectors || "-"}</td>
                 <td>${inv.auditor || "-"}</td>
                 <td>
-                    <button class="btn-icon btn-danger" style="width:25px; height:25px;" onclick="deleteInventoryItem('${inv.id}')">
+                    <button class="btn-icon btn-danger" style="width:25px; height:25px; margin:auto;" onclick="deleteInventoryItem('${inv.id}')">
                         <span class="material-symbols-outlined" style="font-size:14px;">delete</span>
                     </button>
                 </td>
@@ -592,7 +570,6 @@ function handleInventorySubmit(e) {
     const inspectors = document.getElementById("invInspectors").value;
     const auditor = document.getElementById("invAuditor").value;
 
-    // คำนวณหายอดคงคลังสะสม
     const matchedItems = appState.inventory.filter(item => item.name === name);
     let lastBalance = 0;
     if (matchedItems.length > 0) {
@@ -604,7 +581,7 @@ function handleInventorySubmit(e) {
         newBalance += qty;
     } else {
         if (qty > lastBalance) {
-            alert(`ไม่สามารถเบิกออกได้เนื่องจากจำนวนพัสดุในคลังไม่เพียงพอ (คงคลังปัจจุบัน: ${lastBalance} หน่วย)`);
+            alert(`สินค้าไม่เพียงพอที่จะเบิกจ่าย (คงคลังปัจจุบัน: ${lastBalance} หน่วย)`);
             return;
         }
         newBalance -= qty;
@@ -632,25 +609,77 @@ function handleInventorySubmit(e) {
 }
 
 function deleteInventoryItem(itemId) {
-    if (confirm("ต้องการลบประวัติพัสดุคลังชิ้นนี้?")) {
+    if (confirm("ลบประวัติพัสดุคลังชิ้นนี้?")) {
         appState.inventory = appState.inventory.filter(item => item.id !== itemId);
         saveDataToStorage();
         renderInventoryTable();
     }
 }
 
-// 8. สรุปรายเดือนประจำเดือน (แบบที่ 3)
+// ----------------------------------------------------
+// ประวัติคำขอเสนอ และสรุปสถิติต่างๆ
+// ----------------------------------------------------
+function renderHistoryTable() {
+    const tbody = document.getElementById("historyTableBody");
+    tbody.innerHTML = "";
+
+    if (appState.documents.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-secondary);">ไม่มีประวัติการบันทึกขออนุมัติ</td></tr>`;
+        return;
+    }
+
+    appState.documents.forEach(doc => {
+        const cat = BUDGET_RULES[doc.itemCategory];
+        const dateFormatted = new Date(doc.docDate).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" });
+        const quotationBadge = doc.hasQuotation === "true" 
+            ? `<span style="background:var(--success-light); color:var(--success); padding:4px 8px; border-radius:12px; font-size:0.75rem; font-weight:600;">มี</span>`
+            : `<span style="background:var(--danger-light); color:var(--danger); padding:4px 8px; border-radius:12px; font-size:0.75rem; font-weight:600;">ไม่มี</span>`;
+
+        const row = `
+            <tr>
+                <td style="font-weight:600; color:var(--thp-blue-light);">บสค. 60 เลขที่ ${doc.docNumber}</td>
+                <td>${dateFormatted}</td>
+                <td style="font-size:0.9rem;">${cat ? cat.name : "ทั่วไป"}</td>
+                <td>${quotationBadge}</td>
+                <td style="font-weight:700; color:var(--thp-red);">${doc.total.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿</td>
+                <td>${doc.requesterName}</td>
+                <td>
+                    <div class="action-group" style="justify-content:center;">
+                        <button class="btn btn-secondary" style="padding: 4px 10px; font-size:0.8rem;" onclick="printDocument('${doc.id}')">
+                            <span class="material-symbols-outlined" style="font-size:16px;">print</span> พิมพ์บิล
+                        </button>
+                        <button class="btn btn-danger" style="padding: 4px 10px; font-size:0.8rem;" onclick="deleteDocument('${doc.id}')">
+                            <span class="material-symbols-outlined" style="font-size:16px;">delete</span> ลบ
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+        tbody.insertAdjacentHTML("beforeend", row);
+    });
+}
+
+function deleteDocument(docId) {
+    if (confirm("ลบประวัติ บสค. 60 นี้ออกจากระบบใช่ไหม?")) {
+        appState.documents = appState.documents.filter(doc => doc.id !== docId);
+        saveDataToStorage();
+        renderHistoryTable();
+    }
+}
+
+// ----------------------------------------------------
+// สรุปยอดสะสมและประวัติรายเดือน (แบบที่ 3)
+// ----------------------------------------------------
 function renderMonthSelectOptions() {
     const select = document.getElementById("reportMonthSelect");
     select.innerHTML = "";
 
     const months = {};
     appState.documents.forEach(doc => {
-        const monthYear = doc.docDate.substring(0, 7); // yyyy-mm
+        const monthYear = doc.docDate.substring(0, 7);
         months[monthYear] = true;
     });
 
-    // เพิ่มเดือนปัจจุบันลงไปด้วยเพื่อให้เลือกได้หากยังไม่มี
     const currentMonth = new Date().toISOString().substring(0, 7);
     months[currentMonth] = true;
 
@@ -670,7 +699,7 @@ function renderMonthlyReportTable() {
     let grandTotal = 0;
 
     if (monthlyDocs.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:var(--text-secondary);">ไม่มีรายการจัดซื้อจัดจ้างสำหรับเดือนนี้</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:var(--text-secondary);">ไม่มีประวัติการซื้อขายในเดือนนี้</td></tr>`;
         document.getElementById("monthlyReportTotal").innerText = "0.00 ฿";
         return;
     }
@@ -687,13 +716,13 @@ function renderMonthlyReportTable() {
             const row = `
                 <tr>
                     <td>${itemIndex++}</td>
-                    <td>${item.name} <span style="font-size:0.75rem; color:var(--text-secondary); display:block;">(จำนวน ${item.qty} ชิ้น)</span></td>
+                    <td style="font-weight:600;">${item.name} <span style="font-size:0.75rem; color:var(--text-secondary); display:block;">(จำนวน ${item.qty} ชิ้น)</span></td>
                     <td>-</td>
                     <td>${cat ? cat.code : "-"}</td>
                     <td>บสค. 60 เลขที่ ${doc.docNumber}</td>
                     <td>ตามคำสั่งที่ 4/2566</td>
                     <td>${dateFormatted}</td>
-                    <td>เพื่อใช้ในกิจการและปฏิบัติงาน ณ ที่ทำการ</td>
+                    <td>เพื่อใช้ในกิจการหน่วยงาน</td>
                     <td style="text-align:right; font-weight:600;">${itemTotal.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿</td>
                 </tr>
             `;
@@ -704,50 +733,9 @@ function renderMonthlyReportTable() {
     document.getElementById("monthlyReportTotal").innerText = `${grandTotal.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿`;
 }
 
-// 9. การตั้งค่าระบบ
-function handleSettingsSubmit(e) {
-    e.preventDefault();
-    appState.settings.group = document.getElementById("setGroupName").value;
-    appState.settings.monthlyBudget = parseFloat(document.getElementById("setMonthlyBudget").value) || 0;
-    saveDataToStorage();
-    alert("บันทึกการตั้งค่าเรียบร้อยแล้ว!");
-    switchTab("dashboard");
-}
-
-// 10. ระบบสำรองข้อมูลและนำเข้าข้อมูล
-function exportBackupData() {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appState, null, 2));
-    const dlAnchorElem = document.createElement('a');
-    dlAnchorElem.setAttribute("href", dataStr);
-    dlAnchorElem.setAttribute("download", `THP-BergMoney-Backup-${new Date().toISOString().slice(0,10)}.json`);
-    dlAnchorElem.click();
-}
-
-function importBackupData(e) {
-    const fileReader = new FileReader();
-    fileReader.onload = function (event) {
-        try {
-            const parsed = JSON.parse(event.target.result);
-            if (parsed.documents || parsed.inventory || parsed.settings) {
-                appState = {
-                    settings: parsed.settings || appState.settings,
-                    documents: parsed.documents || [],
-                    inventory: parsed.inventory || []
-                };
-                saveDataToStorage();
-                alert("นำเข้าข้อมูลสำรองเรียบร้อยแล้ว!");
-                initApp();
-            } else {
-                alert("รูปแบบไฟล์สำรองไม่ถูกต้อง");
-            }
-        } catch (error) {
-            alert("ไม่สามารถอ่านข้อมูลสำรองได้: " + error.message);
-        }
-    };
-    fileReader.readAsText(e.target.files[0]);
-}
-
-// 11. ฟังก์ชันพิมพ์รายงาน บสค. 60 และ สรุปรายเดือน
+// ----------------------------------------------------
+// ระบบพิมพ์เอกสาร บสค. 60 และ แบบที่ 3
+// ----------------------------------------------------
 function printDocument(docId) {
     const doc = appState.documents.find(d => d.id === docId);
     if (!doc) return;
@@ -755,7 +743,6 @@ function printDocument(docId) {
     const cat = BUDGET_RULES[doc.itemCategory];
     const printSection = document.getElementById("printSection");
 
-    // เตรียมรายการสินค้า
     let itemsRowsHtml = "";
     doc.items.forEach((item, index) => {
         const lastDateFormatted = item.lastDate ? new Date(item.lastDate).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" }) : "-";
@@ -778,24 +765,22 @@ function printDocument(docId) {
     const docDateObj = new Date(doc.docDate);
     const dateFormatted = docDateObj.toLocaleDateString("th-TH", { day: "numeric", month: "long", year: "numeric" });
 
-    // สร้างลิสต์ของประเภทวัสดุทั้งหมดและทำเครื่องหมายวงกลมติ๊กเลือกตามภาพแนบ
     const catKeys = Object.keys(BUDGET_RULES);
-    let categoryCheckboxesHtml = `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 15px 0; font-size: 11pt; border: 1px solid #000; padding: 12px; border-radius: 6px;">`;
+    let categoryCheckboxesHtml = `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 15px 0; font-size: 11pt; border: 1.5px solid #000000; padding: 12px; border-radius: 6px; line-height: 1.6;">`;
     catKeys.forEach(k => {
         const isChecked = doc.itemCategory === k;
-        const symbol = isChecked ? "┠ ✔ ┨" : "┠ &nbsp;&nbsp;&nbsp; ┨";
-        const style = isChecked ? "font-weight: bold; color: #000;" : "color: #555;";
+        const symbol = isChecked ? "☑" : "☐";
+        const style = isChecked ? "font-weight: bold; color: #000000;" : "color: #000000;";
         categoryCheckboxesHtml += `<div style="${style}">${symbol} ${BUDGET_RULES[k].name}</div>`;
     });
     categoryCheckboxesHtml += `</div>`;
 
-    // ประกอบโครงสร้างบันทึกข้อความแบบฟอร์ม บสค. 60 ทางราชการไปรษณีย์ไทย (กรณีหัวหน้าอนุมัติภายใต้อำนาจ ปณท ที่ 4/2566)
     printSection.innerHTML = `
         <div class="print-header">
             <svg width="80" height="40" viewBox="0 0 100 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M0 0H100L85 30H15L0 0Z" fill="#E31837"/>
-                <path d="M15 30H85L65 65H5L15 30Z" fill="#1A3B8B"/>
-                <path d="M5 65H65L55 80H0L5 65Z" fill="#2c59b6"/>
+                <path d="M0 0H100L85 30H15L0 0Z" fill="#D81B60"/>
+                <path d="M15 30H85L65 65H5L15 30Z" fill="#0F2C59"/>
+                <path d="M5 65H65L55 80H0L5 65Z" fill="#1E3E72"/>
             </svg>
             <div style="text-align: right; font-weight: bold; font-size: 18pt;">บันทึกข้อความ</div>
         </div>
@@ -865,14 +850,13 @@ function printDocument(docId) {
 
         <div class="signature-section">
             <div class="sig-block" style="margin-left: auto;">
-                <p style="margin-bottom: 40px;">ลงชื่อ..............................................................</p>
+                <p style="margin-bottom: 45px;">ลงชื่อ..............................................................</p>
                 <p style="font-weight: bold;">(${doc.requesterName})</p>
                 <p>${doc.requesterPosition}</p>
             </div>
         </div>
     `;
 
-    // เรียกพิมพ์ในระดับเบราว์เซอร์
     window.print();
 }
 
@@ -915,19 +899,18 @@ function printMonthlyReport() {
         });
     });
 
-    // ออกแบบตาราง บัญชีสรุปรายการซื้อและการจ้างประจำเดือน (แบบที่ 3) ของ ปณท
     printSection.innerHTML = `
         <div class="print-header">
             <svg width="80" height="40" viewBox="0 0 100 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M0 0H100L85 30H15L0 0Z" fill="#E31837"/>
-                <path d="M15 30H85L65 65H5L15 30Z" fill="#1A3B8B"/>
-                <path d="M5 65H65L55 80H0L5 65Z" fill="#2c59b6"/>
+                <path d="M0 0H100L85 30H15L0 0Z" fill="#D81B60"/>
+                <path d="M15 30H85L65 65H5L15 30Z" fill="#0F2C59"/>
+                <path d="M5 65H65L55 80H0L5 65Z" fill="#1E3E72"/>
             </svg>
             <div style="text-align: right; font-weight: bold; font-size: 16pt;">แบบที่ 3</div>
         </div>
         <h2 class="print-title">บัญชีสรุปรายการซื้อและการจ้างประจำเดือน</h2>
-        <div style="text-align: center; margin-bottom: 20px; font-size: 14pt;">
-            ที่ทำการ: <b>ที่ทำการไปรษณีย์มาบตาพุด</b>ประจำเดือน <b>${thaiMonthText}</b>
+        <div style="text-align: center; margin-bottom: 25px; font-size: 14pt;">
+            ที่ทำการ: <b>ที่ทำการไปรษณีย์มาบตาพุด</b> &nbsp;&nbsp;&nbsp; ประจำเดือน <b>${thaiMonthText}</b>
         </div>
         
         <table class="item-table" style="font-size: 11pt;">
@@ -955,7 +938,7 @@ function printMonthlyReport() {
 
         <div class="signature-section">
             <div class="sig-block" style="margin-left: auto;">
-                <p style="margin-bottom: 40px;">ลงชื่อ..............................................................</p>
+                <p style="margin-bottom: 45px;">ลงชื่อ..............................................................</p>
                 <p style="font-weight: bold;">(นายนิพล ทรัพย์หมื่นแสน)</p>
                 <p>หัวหน้าที่ทำการไปรษณีย์มาบตาพุด</p>
             </div>
@@ -965,16 +948,132 @@ function printMonthlyReport() {
     window.print();
 }
 
-// 12. ฟังก์ชันเสริมช่วยเหลือ
+// ----------------------------------------------------
+// ฟังก์ชันเสริมอื่นๆ
+// ----------------------------------------------------
 function openModal(modalId) {
     document.getElementById(modalId).classList.add("active");
 }
 
-function closeModal(modalId) {
+window.closeModal = function(modalId) {
     document.getElementById(modalId).classList.remove("active");
+};
+
+function handleSettingsSubmit(e) {
+    e.preventDefault();
+    appState.settings.group = document.getElementById("setGroupName").value;
+    appState.settings.monthlyBudget = parseFloat(document.getElementById("setMonthlyBudget").value) || 0;
+    saveDataToStorage();
+    alert("บันทึกการตั้งค่าระบบใหม่เรียบร้อยแล้ว!");
+    switchTab("dashboard");
 }
 
-// แปลงเลขอารบิกเป็นตัวเงินภาษาไทย
+function updateUIElements() {
+    const currentMonthStr = new Date().toISOString().substring(0, 7);
+    const currentMonthDocs = appState.documents.filter(doc => doc.docDate.startsWith(currentMonthStr));
+    const totalSpentThisMonth = currentMonthDocs.reduce((sum, doc) => sum + doc.total, 0);
+    
+    document.getElementById("statCount").innerText = `${currentMonthDocs.length} รายการ`;
+    document.getElementById("statTotal").innerText = `${totalSpentThisMonth.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿`;
+    
+    const remainingOfficeBudget = appState.settings.monthlyBudget - totalSpentThisMonth;
+    const statBudgetElement = document.getElementById("statBudget");
+    statBudgetElement.innerText = `${remainingOfficeBudget.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿`;
+    statBudgetElement.style.color = remainingOfficeBudget < 2000 ? "var(--danger)" : "var(--success)";
+
+    renderBudgetQuotaTable(currentMonthStr);
+}
+
+function renderBudgetQuotaTable(currentMonthStr) {
+    const tbody = document.getElementById("budgetLimitTableBody");
+    tbody.innerHTML = "";
+
+    const userGroup = appState.settings.group;
+
+    Object.keys(BUDGET_RULES).forEach(key => {
+        const rule = BUDGET_RULES[key];
+        
+        let limitPerRequestText = "-";
+        if (rule.limitPerRequest) {
+            if (typeof rule.limitPerRequest === "object") {
+                limitPerRequestText = `รถยนต์: ${rule.limitPerRequest.car.toLocaleString()}฿ / จยย.: ${rule.limitPerRequest.bike.toLocaleString()}฿`;
+            } else {
+                limitPerRequestText = `${rule.limitPerRequest.toLocaleString()} ฿`;
+            }
+        }
+
+        let monthlyLimit = 0;
+        let limitPerMonthText = "-";
+        if (rule.limitPerMonth) {
+            if (typeof rule.limitPerMonth === "object") {
+                monthlyLimit = rule.limitPerMonth[userGroup];
+                limitPerMonthText = `${monthlyLimit.toLocaleString()} ฿ (กลุ่มที่ทำการ)`;
+            } else {
+                monthlyLimit = rule.limitPerMonth;
+                limitPerMonthText = `${monthlyLimit.toLocaleString()} ฿`;
+            }
+        }
+
+        const spentThisMonth = appState.documents
+            .filter(doc => doc.docDate.startsWith(currentMonthStr) && doc.itemCategory === key)
+            .reduce((sum, doc) => sum + doc.total, 0);
+
+        const remaining = monthlyLimit ? (monthlyLimit - spentThisMonth) : Infinity;
+        let remainingText = remaining === Infinity ? "ไม่จำกัดงบรายเดือน" : `${remaining.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿`;
+        
+        let statusBadge = `<span style="background:var(--success-light); color:var(--success); padding:3px 8px; border-radius:12px; font-size:0.75rem; font-weight:600;">พร้อมใช้งาน</span>`;
+        if (remaining <= 0 && remaining !== Infinity) {
+            statusBadge = `<span style="background:var(--danger-light); color:var(--danger); padding:3px 8px; border-radius:12px; font-size:0.75rem; font-weight:600;">เต็มวงเงินแล้ว</span>`;
+        } else if (remaining < 1000 && remaining !== Infinity) {
+            statusBadge = `<span style="background:var(--warning-light); color:var(--warning); padding:3px 8px; border-radius:12px; font-size:0.75rem; font-weight:600;">ใกล้เต็ม</span>`;
+        }
+
+        const row = `
+            <tr>
+                <td style="font-weight:600; color:var(--thp-blue-light);">${rule.name} <span style="font-size:0.75rem; color:var(--text-secondary); display:block;">รหัสบัญชี: ${rule.code}</span></td>
+                <td>${limitPerRequestText}</td>
+                <td>${limitPerMonthText}</td>
+                <td style="font-weight:500;">${spentThisMonth.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿</td>
+                <td style="font-weight:600; color: ${remaining <= 0 ? 'var(--danger)' : 'inherit'}">${remainingText}</td>
+                <td>${statusBadge}</td>
+            </tr>
+        `;
+        tbody.insertAdjacentHTML("beforeend", row);
+    });
+}
+
+function exportBackupData() {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appState, null, 2));
+    const dlAnchorElem = document.createElement('a');
+    dlAnchorElem.setAttribute("href", dataStr);
+    dlAnchorElem.setAttribute("download", `THP-BergMoney-Backup-${new Date().toISOString().slice(0,10)}.json`);
+    dlAnchorElem.click();
+}
+
+function importBackupData(e) {
+    const fileReader = new FileReader();
+    fileReader.onload = function (event) {
+        try {
+            const parsed = JSON.parse(event.target.result);
+            if (parsed.documents || parsed.inventory || parsed.settings) {
+                appState = {
+                    settings: parsed.settings || appState.settings,
+                    documents: parsed.documents || [],
+                    inventory: parsed.inventory || []
+                };
+                saveDataToStorage();
+                alert("นำเข้าข้อมูลสำรองเข้าระบบแล้ว!");
+                initApp();
+            } else {
+                alert("รูปแบบไฟล์สำรองไม่ถูกต้อง");
+            }
+        } catch (error) {
+            alert("ไม่สามารถอ่านข้อมูลสะสมได้: " + error.message);
+        }
+    };
+    fileReader.readAsText(e.target.files[0]);
+}
+
 function arabicToThaiBaht(num) {
     if (num === 0) return "ศูนย์บาทถ้วน";
     const textNumber = ["ศูนย์", "หนึ่ง", "สอง", "สาม", "สี่", "ห้า", "หก", "เจ็ด", "แปด", "เก้า"];
@@ -986,13 +1085,11 @@ function arabicToThaiBaht(num) {
 
     let result = "";
 
-    // จัดการจำนวนเต็ม
     if (parseInt(integerPart) > 0) {
         let length = integerPart.length;
         for (let i = 0; i < length; i++) {
             let digit = parseInt(integerPart.charAt(i));
             if (digit !== 0) {
-                // คำนวณหลักหน่วยและหลักสิบพิเศษ
                 if (i === length - 1 && digit === 1 && length > 1) {
                     result += "เอ็ด";
                 } else if (i === length - 2 && digit === 2) {
@@ -1008,7 +1105,6 @@ function arabicToThaiBaht(num) {
         result += "บาท";
     }
 
-    // จัดการทศนิยม
     if (parseInt(decimalPart) === 0) {
         result += "ถ้วน";
     } else {
