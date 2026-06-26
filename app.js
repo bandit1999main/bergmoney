@@ -196,6 +196,23 @@ function setupEventHandlers() {
         durableForm.addEventListener("submit", handleDurableSubmit);
     }
 
+    const importDurableBtn = document.getElementById("importDurableBtn");
+    if (importDurableBtn) {
+        importDurableBtn.addEventListener("click", () => {
+            document.getElementById("durableImportFileInput").click();
+        });
+    }
+
+    const durableImportFileInput = document.getElementById("durableImportFileInput");
+    if (durableImportFileInput) {
+        durableImportFileInput.addEventListener("change", importDurablesCSV);
+    }
+
+    const exportDurableBtn = document.getElementById("exportDurableBtn");
+    if (exportDurableBtn) {
+        exportDurableBtn.addEventListener("click", exportDurablesCSV);
+    }
+
     // บันทึกการตั้งค่า
     document.getElementById("settingsForm").addEventListener("submit", handleSettingsSubmit);
 
@@ -519,6 +536,24 @@ function handleBskSubmit(e) {
         necessityReason
     };
 
+    // Auto-update durable stock quantity
+    if (appState.durables && appState.durables.length > 0) {
+        items.forEach(item => {
+            if (item.durableCode) {
+                const durable = appState.durables.find(d => d.code === item.durableCode);
+                if (durable) {
+                    durable.qty = (durable.qty || 0) + (parseInt(item.qty) || 0);
+                }
+            } else if (item.name) {
+                const durable = appState.durables.find(d => d.name.trim().toLowerCase() === item.name.trim().toLowerCase());
+                if (durable) {
+                    durable.qty = (durable.qty || 0) + (parseInt(item.qty) || 0);
+                }
+            }
+        });
+        renderDurableTable();
+    }
+
     appState.documents.push(newDoc);
     saveDataToStorage();
 
@@ -714,9 +749,26 @@ function renderHistoryTable() {
 
 function deleteDocument(docId) {
     if (confirm("ลบประวัติใบขออนุมัตินี้ออกจากฐานข้อมูล?")) {
+        const docToDelete = appState.documents.find(doc => doc.id === docId);
+        if (docToDelete && docToDelete.items && appState.durables && appState.durables.length > 0) {
+            docToDelete.items.forEach(item => {
+                if (item.durableCode) {
+                    const durable = appState.durables.find(d => d.code === item.durableCode);
+                    if (durable) {
+                        durable.qty = Math.max(0, (durable.qty || 0) - (parseInt(item.qty) || 0));
+                    }
+                } else if (item.name) {
+                    const durable = appState.durables.find(d => d.name.trim().toLowerCase() === item.name.trim().toLowerCase());
+                    if (durable) {
+                        durable.qty = Math.max(0, (durable.qty || 0) - (parseInt(item.qty) || 0));
+                    }
+                }
+            });
+        }
         appState.documents = appState.documents.filter(doc => doc.id !== docId);
         saveDataToStorage();
         renderHistoryTable();
+        renderDurableTable();
     }
 }
 
@@ -1312,4 +1364,131 @@ function renderLimitsSettingsTable() {
         `;
         tbody.appendChild(row);
     });
+}
+
+// ----------------------------------------------------
+// ระบบนำเข้าและส่งออกข้อมูลครุภัณฑ์เป็นไฟล์ CSV
+// ----------------------------------------------------
+function exportDurablesCSV() {
+    if (!appState.durables || appState.durables.length === 0) {
+        alert("ไม่มีข้อมูลครุภัณฑ์ที่จะส่งออก");
+        return;
+    }
+
+    let csvContent = "\uFEFF"; // UTF-8 BOM
+    csvContent += "รหัสครุภัณฑ์,ชื่อครุภัณฑ์/รายการ,หมวดหมู่รายจ่าย,จำนวน,หมายเหตุ\r\n";
+
+    appState.durables.forEach(d => {
+        const code = (d.code || "").replace(/"/g, '""');
+        const name = (d.name || "").replace(/"/g, '""');
+        const qty = d.qty || 0;
+        const remark = (d.remark || "").replace(/"/g, '""');
+        csvContent += `"${code}","${name}","${d.category}",${qty},"${remark}"\r\n`;
+    });
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `durable_assets_${new Date().toISOString().substring(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function importDurablesCSV(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+        const text = evt.target.result;
+        const lines = text.split(/\r?\n/);
+        
+        let importCount = 0;
+        let updateCount = 0;
+        
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
+
+            const cols = parseCSVLine(line);
+            if (cols.length < 2) continue;
+
+            const code = cols[0].trim();
+            const name = cols[1].trim();
+            const categoryStr = cols[2] ? cols[2].trim() : "";
+            const qty = cols[3] ? parseInt(cols[3].trim()) || 0 : 0;
+            const remark = cols[4] ? cols[4].trim() : "";
+
+            if (!code || !name) continue;
+
+            const category = findCategoryKey(categoryStr);
+
+            const existing = appState.durables.find(d => d.code === code);
+            if (existing) {
+                existing.name = name;
+                existing.category = category;
+                existing.qty = (existing.qty || 0) + qty;
+                if (remark) existing.remark = remark;
+                updateCount++;
+            } else {
+                appState.durables.push({
+                    id: "CUR-" + Date.now() + "-" + Math.floor(Math.random() * 1000),
+                    code,
+                    name,
+                    category,
+                    qty,
+                    remark
+                });
+                importCount++;
+            }
+        }
+
+        saveDataToStorage();
+        renderDurableTable();
+        alert(`นำเข้าครุภัณฑ์เสร็จสิ้น! เพิ่มใหม่ ${importCount} รายการ, อัปเดตยอดเดิม ${updateCount} รายการ`);
+        
+        e.target.value = "";
+    };
+    
+    reader.readAsText(file, "UTF-8");
+}
+
+function findCategoryKey(str) {
+    if (!str) return "stationery";
+    const cleaned = str.trim().toLowerCase();
+    
+    if (BUDGET_RULES[cleaned]) {
+        return cleaned;
+    }
+    
+    for (const [key, rule] of Object.entries(BUDGET_RULES)) {
+        if (rule.name.toLowerCase().includes(cleaned) || 
+            rule.code.toLowerCase() === cleaned || 
+            rule.label.toLowerCase().includes(cleaned)) {
+            return key;
+        }
+    }
+    
+    return "stationery";
+}
+
+function parseCSVLine(line) {
+    const result = [];
+    let current = "";
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        if (char === '"') {
+            inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+            result.push(current);
+            current = "";
+        } else {
+            current += char;
+        }
+    }
+    result.push(current);
+    return result;
 }
