@@ -498,7 +498,7 @@
                 <span class="material-symbols-outlined">history</span> ประวัติขออนุมัติ
             </div>
             <div class="menu-item" data-tab="inventory">
-                <span class="material-symbols-outlined">inventory</span> คุมพัสดุ (แบบที่ 2)
+                <span class="material-symbols-outlined">category</span> จัดการครุภัณฑ์
             </div>
             <div class="menu-item" data-tab="monthly-report">
                 <span class="material-symbols-outlined">analytics</span> สรุปรายเดือน (แบบที่ 3)
@@ -658,9 +658,10 @@
                                 <thead>
                                     <tr>
                                         <th rowspan="2" style="width: 5%; text-align: center; vertical-align: middle;">ลำดับ</th>
-                                        <th rowspan="2" style="width: 35%; text-align: center; vertical-align: middle;">รายการจัดซื้อ/จัดจ้าง</th>
+                                        <th rowspan="2" style="width: 25%; text-align: center; vertical-align: middle;">รายการจัดซื้อ/จัดจ้าง</th>
+                                        <th rowspan="2" style="width: 15%; text-align: center; vertical-align: middle;">รหัสครุภัณฑ์</th>
                                         <th colspan="3" style="width: 30%; text-align: center; border-bottom: 1px solid var(--border-color);">ซื้อ/จ้าง ครั้งล่าสุด</th>
-                                        <th colspan="2" style="width: 25%; text-align: center; border-bottom: 1px solid var(--border-color);">ซื้อ/จ้าง ครั้งนี้</th>
+                                        <th colspan="2" style="width: 20%; text-align: center; border-bottom: 1px solid var(--border-color);">ซื้อ/จ้าง ครั้งนี้</th>
                                         <th rowspan="2" style="width: 5%;"></th>
                                     </tr>
                                     <tr>
@@ -678,6 +679,9 @@
                                             <input type="text" class="item-name" placeholder="ระบุรายละเอียดสิ่งของ (พิมพ์เพื่อค้นหาประวัติ)" required style="width: 100%;">
                                             <div class="suggest-box"></div>
                                         </td>
+                                        <td>
+                                            <input type="text" class="item-durable-code" placeholder="เช่น 51090902-001" style="width: 100%;">
+                                        </td>
                                         <td><input type="date" class="item-last-date" style="width: 100%;"></td>
                                         <td><input type="number" class="item-last-qty" placeholder="จำนวน" style="width: 100%; text-align: center;"></td>
                                         <td><input type="number" class="item-last-price" placeholder="0.00" min="0" step="0.01" style="width: 100%; text-align: right;"></td>
@@ -692,12 +696,12 @@
                                 </tbody>
                                 <tfoot>
                                     <tr>
-                                        <td colspan="6" style="text-align: right; font-weight: bold;">รวมเงินทั้งสิ้น:</td>
+                                        <td colspan="7" style="text-align: right; font-weight: bold;">รวมเงินทั้งสิ้น:</td>
                                         <td id="formTotalDisplay" style="text-align: right; font-weight: bold; font-size: 1.1rem; color: var(--thp-red);">0.00 ฿</td>
                                         <td></td>
                                     </tr>
                                     <tr>
-                                        <td colspan="8" id="thaiBahtText" style="text-align: right; font-style: italic; color: var(--text-secondary);">(-)</td>
+                                        <td colspan="9" id="thaiBahtText" style="text-align: right; font-style: italic; color: var(--text-secondary);">(-)</td>
                                     </tr>
                                 </tfoot>
                             </table>
@@ -766,28 +770,23 @@
             <div class="tab-pane" id="inventory">
                 <div class="panel">
                     <div class="panel-header">
-                        <h2>บัญชีควบคุมพัสดุคลังพัสดุ (แบบที่ 2)</h2>
-                        <button class="btn btn-primary" id="addInventoryBtn">
-                            <span class="material-symbols-outlined">add_box</span> บันทึกรายการพัสดุคลัง
+                        <h2>จัดการทะเบียนข้อมูลครุภัณฑ์</h2>
+                        <button class="btn btn-primary" id="addDurableBtn">
+                            <span class="material-symbols-outlined">add_box</span> เพิ่มครุภัณฑ์ใหม่
                         </button>
                     </div>
                     <div class="table-responsive">
                         <table>
                             <thead>
                                 <tr>
-                                    <th>ว.ด.ป.</th>
-                                    <th>รายละเอียดวัสดุ</th>
-                                    <th>เลขที่ใบเสร็จ/บสค.อ้างอิง</th>
-                                    <th>จำนวนรับเข้า</th>
-                                    <th>จำนวนเบิกจ่าย</th>
-                                    <th>ยอดคงเหลือคลัง</th>
-                                    <th>ผู้รับสิ่งของ</th>
-                                    <th>คณะกรรมการตรวจนับ</th>
-                                    <th>ผู้ตรวจสอบ</th>
-                                    <th></th>
+                                    <th style="width: 15%;">รหัสครุภัณฑ์</th>
+                                    <th style="width: 35%;">ชื่อครุภัณฑ์/รายการ</th>
+                                    <th style="width: 20%;">หมวดหมู่รายจ่าย</th>
+                                    <th style="width: 20%;">หมายเหตุ</th>
+                                    <th style="width: 10%; text-align: center;">จัดการ</th>
                                 </tr>
                             </thead>
-                            <tbody id="inventoryTableBody">
+                            <tbody id="durableTableBody">
                                 <!-- JS -->
                             </tbody>
                         </table>
@@ -902,62 +901,52 @@
         </div>
     </div>
 
-    <!-- Inventory Modal -->
-    <div class="modal" id="inventoryModal">
+    <!-- Durable Modal -->
+    <div class="modal" id="durableModal">
         <div class="modal-content">
             <div class="panel-header" style="margin-bottom: 0; padding-bottom: 0.5rem;">
-                <h3>บันทึกข้อมูลรายการบัญชีควบคุมวัสดุ</h3>
-                <button class="btn-icon-only" onclick="closeModal('inventoryModal')">
+                <h3 id="durableModalTitle">เพิ่มข้อมูลครุภัณฑ์</h3>
+                <button class="btn-icon-only" onclick="closeModal('durableModal')">
                     <span class="material-symbols-outlined">close</span>
                 </button>
             </div>
-            <form id="inventoryForm" style="margin-top: 1rem;">
+            <form id="durableForm" style="margin-top: 1rem;">
+                <input type="hidden" id="durableId">
                 <div class="form-grid">
                     <div class="form-group">
-                        <label for="invDate">ว.ด.ป.</label>
-                        <input type="date" id="invDate" required>
+                        <label for="durableCode">รหัสครุภัณฑ์</label>
+                        <input type="text" id="durableCode" placeholder="เช่น 51090902-001" required>
                     </div>
                     <div class="form-group">
-                        <label for="invName">รายละเอียดชื่อวัสดุ</label>
-                        <input type="text" id="invName" placeholder="ระบุประเภทพัสดุ" required>
+                        <label for="durableName">ชื่อครุภัณฑ์/รายการ</label>
+                        <input type="text" id="durableName" placeholder="เช่น เครื่องพิมพ์คอมพิวเตอร์" required>
                     </div>
                 </div>
                 <div class="form-grid">
                     <div class="form-group">
-                        <label for="invRef">เลขอนุมัติขอซื้อ/บสค. อ้างอิง</label>
-                        <input type="text" id="invRef" placeholder="เช่น บสค.60 เลขที่ 01/2566" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="invAction">ประเภทรายการ</label>
-                        <select id="invAction" required>
-                            <option value="receive">รับเข้าพัสดุคลัง</option>
-                            <option value="issue">จ่ายออกพัสดุคลัง</option>
+                        <label for="durableCategory">หมวดหมู่รายจ่าย</label>
+                        <select id="durableCategory" required>
+                            <option value="med">ซื้อยาเวชภัณฑ์และยาประจำตู้ยา</option>
+                            <option value="stationery" selected>วัสดุสิ้นเปลือง - เครื่องใช้สำนักงาน</option>
+                            <option value="electricity">วัสดุสิ้นเปลือง - อุปกรณ์ไฟฟ้า/ประปา/สาธารณูปโภค</option>
+                            <option value="household">วัสดุสิ้นเปลือง - งานบ้านงานครัว</option>
+                            <option value="waste">กำจัดขยะและสิ่งปฏิกูล/ลอกท่อระบายน้ำ</option>
+                            <option value="building">ซ่อมแซมและบำรุงรักษาอาคารและสิ่งปลูกสร้าง</option>
+                            <option value="machine">ซ่อมแซมและบำรุงรักษาเครื่องจักรและอุปกรณ์</option>
+                            <option value="tool">ซ่อมแซมและบำรุงรักษาเครื่องมือเครื่องใช้ทั่วไป</option>
+                            <option value="office_repair">ซ่อมแซมและบำรุงรักษาเครื่องใช้สำนักงาน</option>
+                            <option value="car_repair">ซ่อมแซมและบำรุงรักษายานพาหนะ</option>
+                            <option value="public_utility">ติดตั้งและซ่อมแซมบำรุงรักษาอุปกรณ์สาธารณูปโภค</option>
                         </select>
                     </div>
-                </div>
-                <div class="form-grid">
                     <div class="form-group">
-                        <label for="invQty">จำนวนสิ่งของ (หน่วย)</label>
-                        <input type="number" id="invQty" min="1" required value="1">
-                    </div>
-                    <div class="form-group">
-                        <label for="invReceiver">ผู้รับมอบของ</label>
-                        <input type="text" id="invReceiver" placeholder="ระบุชื่อผู้รับของ">
-                    </div>
-                </div>
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label for="invInspectors">คณะกรรมการตรวจรับ</label>
-                        <input type="text" id="invInspectors" placeholder="ระบุชื่อคณะกรรมการ">
-                    </div>
-                    <div class="form-group">
-                        <label for="invAuditor">ผู้ควบคุม/ตรวจสอบ</label>
-                        <input type="text" id="invAuditor" placeholder="ระบุชื่อผู้ตรวจสอบคลัง">
+                        <label for="durableRemark">หมายเหตุ</label>
+                        <input type="text" id="durableRemark" placeholder="เช่น ใช้งานประจำ ปณ.มาบตาพุด">
                     </div>
                 </div>
                 <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem;">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal('inventoryModal')">ยกเลิก</button>
-                    <button type="submit" class="btn btn-primary">บันทึกคลัง</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('durableModal')">ยกเลิก</button>
+                    <button type="submit" class="btn btn-primary" id="saveDurableBtn">บันทึกข้อมูล</button>
                 </div>
             </form>
         </div>
@@ -966,6 +955,6 @@
     <!-- Print Preview Container -->
     <div class="print-container" id="printSection"></div>
 
-    <script src="app.js?v=1.1.3"></script>
+    <script src="app.js?v=1.2.0"></script>
 </body>
 </html>

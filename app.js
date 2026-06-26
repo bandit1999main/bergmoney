@@ -53,10 +53,14 @@ function initApp() {
             }
             if (parsed.documents) appState.documents = parsed.documents;
             if (parsed.inventory) appState.inventory = parsed.inventory;
+            if (parsed.durables) appState.durables = parsed.durables;
         } catch (e) {
             console.error("Error loading localStorage data", e);
         }
     } else {
+        appState.durables = [
+            { id: "CUR-001", code: "51090902-001", name: "กระดาษ A4 Double A 80g", category: "stationery", remark: "ใช้ประจำสำนักงาน" }
+        ];
         // จำลองข้อมูลเพื่อความสวยงามในครั้งแรก
         appState.documents = [
             {
@@ -131,6 +135,13 @@ function initApp() {
     const requesterPositionInput = document.getElementById("requesterPosition");
     if (requesterPositionInput) requesterPositionInput.value = appState.settings.officerPosition;
 
+    if (!appState.durables) {
+        appState.durables = [
+            { id: "CUR-001", code: "51090902-001", name: "กระดาษ A4 Double A 80g", category: "stationery", remark: "ใช้ประจำสำนักงาน" }
+        ];
+        saveDataToStorage();
+    }
+
     renderLimitsSettingsTable();
     updateUIElements();
     
@@ -170,9 +181,20 @@ function setupEventHandlers() {
     document.getElementById("itemCategory").addEventListener("change", checkQuotaLimits);
     document.getElementById("formTableBody").addEventListener("input", handleTableInput);
 
-    // Dialog จัดการคลังพัสดุ
-    document.getElementById("addInventoryBtn").addEventListener("click", () => openModal("inventoryModal"));
-    document.getElementById("inventoryForm").addEventListener("submit", handleInventorySubmit);
+    // Dialog จัดการครุภัณฑ์
+    const addDurableBtn = document.getElementById("addDurableBtn");
+    if (addDurableBtn) {
+        addDurableBtn.addEventListener("click", () => {
+            document.getElementById("durableForm").reset();
+            document.getElementById("durableId").value = "";
+            document.getElementById("durableModalTitle").innerText = "เพิ่มข้อมูลครุภัณฑ์";
+            openModal("durableModal");
+        });
+    }
+    const durableForm = document.getElementById("durableForm");
+    if (durableForm) {
+        durableForm.addEventListener("submit", handleDurableSubmit);
+    }
 
     // บันทึกการตั้งค่า
     document.getElementById("settingsForm").addEventListener("submit", handleSettingsSubmit);
@@ -200,7 +222,7 @@ function switchTab(tabId) {
         "dashboard": "แดชบอร์ดสรุปงบประมาณและโควตาวงเงิน",
         "bsk60-form": "บันทึกข้อความขออนุมัติจัดซื้อจัดจ้าง บสค. 60",
         "history": "ประวัติคำขอจัดซื้อจัดจ้าง บสค. 60",
-        "inventory": "บัญชีควบคุมพัสดุคลังพัสดุ (แบบที่ 2)",
+        "inventory": "จัดการทะเบียนข้อมูลครุภัณฑ์",
         "monthly-report": "สรุปรายการซื้อและการจ้างประจำเดือน (แบบที่ 3)",
         "settings": "ตั้งค่าข้อมูลที่ทำการไปรษณีย์และรหัสหน่วยงาน"
     };
@@ -211,7 +233,7 @@ function switchTab(tabId) {
     } else if (tabId === "history") {
         renderHistoryTable();
     } else if (tabId === "inventory") {
-        renderInventoryTable();
+        renderDurableTable();
     } else if (tabId === "monthly-report") {
         renderMonthlyReportTable();
     }
@@ -238,59 +260,72 @@ function showSuggestions(input, boxElement) {
     const val = input.value.trim().toLowerCase();
     boxElement.innerHTML = "";
     
-    const itemsHistory = [];
-    const seen = new Set();
-
-    appState.documents.forEach(doc => {
-        doc.items.forEach(item => {
-            const name = item.name.trim();
-            if (!seen.has(name)) {
-                seen.add(name);
-                itemsHistory.push({
-                    name: name,
-                    lastDate: doc.docDate,
-                    lastQty: item.qty,
-                    lastPrice: item.price
-                });
-            }
-        });
-    });
-
-    appState.inventory.forEach(inv => {
-        const name = inv.name.trim();
-        if (!seen.has(name) && inv.action === "receive") {
-            seen.add(name);
-            itemsHistory.push({
-                name: name,
-                lastDate: inv.date,
-                lastQty: inv.qty,
-                lastPrice: 0
-            });
-        }
-    });
-
-    const filtered = itemsHistory.filter(i => i.name.toLowerCase().includes(val));
-
-    if (filtered.length === 0) {
+    if (!appState.durables || appState.durables.length === 0) {
         boxElement.style.display = "none";
         return;
     }
 
-    filtered.forEach(item => {
+    const suggestions = appState.durables.filter(d => 
+        d.name.toLowerCase().includes(val) || 
+        d.code.toLowerCase().includes(val)
+    );
+
+    if (suggestions.length === 0) {
+        boxElement.style.display = "none";
+        return;
+    }
+
+    suggestions.forEach(d => {
         const div = document.createElement("div");
         div.className = "suggest-item";
-        const dateFormatted = new Date(item.lastDate).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" });
-        div.innerHTML = `
-            <strong>${item.name}</strong>
-            <span class="suggest-item-desc">ครั้งล่าสุด: ${dateFormatted} | จำนวน: ${item.lastQty} | ${item.lastPrice ? `${item.lastPrice}฿` : 'ไม่มีประวัติราคา'}</span>
-        `;
+        div.style.padding = "8px 12px";
+        div.style.cursor = "pointer";
+        div.style.borderBottom = "1px solid var(--border-color)";
+        div.innerHTML = `<strong>${d.name}</strong> <span style="font-size:0.8rem; color:var(--text-secondary);">(${d.code})</span>`;
 
         div.addEventListener("click", () => {
-            input.value = item.name;
+            input.value = d.name;
             const row = input.closest("tr");
-            row.querySelector(".item-last-date").value = item.lastDate;
-            row.querySelector(".item-last-qty").value = item.lastQty;
-            row.querySelector(".item-last-price").value = item.lastPrice || 0;
+            
+            const codeInput = row.querySelector(".item-durable-code");
+            if (codeInput) codeInput.value = d.code;
+            
+            if (d.category) {
+                const categorySelect = document.getElementById("itemCategory");
+                if (categorySelect) {
+                    categorySelect.value = d.category;
+                    checkQuotaLimits();
+                }
+            }
+
+            // ค้นหาประวัติจัดซื้อจัดจ้างครั้งล่าสุดสำหรับครุภัณฑ์ตัวนี้
+            let lastDoc = null;
+            let lastItem = null;
+            for (let i = appState.documents.length - 1; i >= 0; i--) {
+                const doc = appState.documents[i];
+                const item = doc.items.find(it => it.name.trim() === d.name.trim());
+                if (item) {
+                    lastDoc = doc;
+                    lastItem = item;
+                    break;
+                }
+            }
+
+            if (lastDoc && lastItem) {
+                const lastDateInput = row.querySelector(".item-last-date");
+                if (lastDateInput) lastDateInput.value = lastDoc.docDate;
+                const lastQtyInput = row.querySelector(".item-last-qty");
+                if (lastQtyInput) lastQtyInput.value = lastItem.qty;
+                const lastPriceInput = row.querySelector(".item-last-price");
+                if (lastPriceInput) lastPriceInput.value = lastItem.price;
+            } else {
+                const lastDateInput = row.querySelector(".item-last-date");
+                if (lastDateInput) lastDateInput.value = "";
+                const lastQtyInput = row.querySelector(".item-last-qty");
+                if (lastQtyInput) lastQtyInput.value = "";
+                const lastPriceInput = row.querySelector(".item-last-price");
+                if (lastPriceInput) lastPriceInput.value = "";
+            }
             
             boxElement.style.display = "none";
             calculateFormTotal();
@@ -395,6 +430,9 @@ function addFormItemRow() {
                 <input type="text" class="item-name" placeholder="ระบุรายละเอียดสิ่งของ (พิมพ์เพื่อค้นหาประวัติ)" required style="width: 100%;">
                 <div class="suggest-box"></div>
             </td>
+            <td>
+                <input type="text" class="item-durable-code" placeholder="เช่น 51090902-001" style="width: 100%;">
+            </td>
             <td><input type="date" class="item-last-date" style="width: 100%;"></td>
             <td><input type="number" class="item-last-qty" placeholder="จำนวน" style="width: 100%; text-align: center;"></td>
             <td><input type="number" class="item-last-price" placeholder="0.00" min="0" step="0.01" style="width: 100%; text-align: right;"></td>
@@ -450,13 +488,14 @@ function handleBskSubmit(e) {
     const rows = document.querySelectorAll("#formTableBody tr");
     rows.forEach(row => {
         const name = row.querySelector(".item-name").value;
+        const durableCode = row.querySelector(".item-durable-code").value.trim();
         const lastDate = row.querySelector(".item-last-date").value;
         const lastQty = row.querySelector(".item-last-qty").value;
         const lastPrice = row.querySelector(".item-last-price").value;
         const qty = parseFloat(row.querySelector(".item-qty").value) || 1;
         const price = parseFloat(row.querySelector(".item-price").value) || 0;
         
-        items.push({ name, lastDate, lastQty, lastPrice, qty, price });
+        items.push({ name, durableCode, lastDate, lastQty, lastPrice, qty, price });
         total += qty * price;
     });
 
@@ -507,6 +546,9 @@ function handleBskSubmit(e) {
                 <input type="text" class="item-name" placeholder="ระบุรายละเอียดสิ่งของ (พิมพ์เพื่อค้นหาประวัติ)" required style="width: 100%;">
                 <div class="suggest-box"></div>
             </td>
+            <td>
+                <input type="text" class="item-durable-code" placeholder="เช่น 51090902-001" style="width: 100%;">
+            </td>
             <td><input type="date" class="item-last-date" style="width: 100%;"></td>
             <td><input type="number" class="item-last-qty" placeholder="จำนวน" style="width: 100%; text-align: center;"></td>
             <td><input type="number" class="item-last-price" placeholder="0.00" min="0" step="0.01" style="width: 100%; text-align: right;"></td>
@@ -524,34 +566,34 @@ function handleBskSubmit(e) {
     switchTab("history");
 }
 
-function renderInventoryTable() {
-    const tbody = document.getElementById("inventoryTableBody");
+function renderDurableTable() {
+    const tbody = document.getElementById("durableTableBody");
+    if (!tbody) return;
     tbody.innerHTML = "";
 
-    if (appState.inventory.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; color:var(--text-secondary);">ไม่มีข้อมูลในคลังสินค้า</td></tr>`;
+    if (appState.durables.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-secondary);">ไม่มีข้อมูลทะเบียนครุภัณฑ์</td></tr>`;
         return;
     }
 
-    appState.inventory.forEach(inv => {
-        const dateFormatted = new Date(inv.date).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" });
-        const isReceive = inv.action === "receive";
-
+    appState.durables.forEach(d => {
+        const cat = BUDGET_RULES[d.category];
+        const catName = cat ? cat.name : "-";
         const row = `
             <tr>
-                <td>${dateFormatted}</td>
-                <td style="font-weight:600;">${inv.name}</td>
-                <td>${inv.ref}</td>
-                <td style="color:var(--success); font-weight:600;">${isReceive ? `+ ${inv.qty}` : '-'}</td>
-                <td style="color:#EF4444; font-weight:600;">${!isReceive ? `- ${inv.qty}` : '-'}</td>
-                <td style="font-weight:600;">${inv.balance}</td>
-                <td>${inv.receiver || "-"}</td>
-                <td>${inv.inspectors || "-"}</td>
-                <td>${inv.auditor || "-"}</td>
+                <td style="font-weight:600;">${d.code}</td>
+                <td>${d.name}</td>
+                <td>${catName}</td>
+                <td>${d.remark || "-"}</td>
                 <td>
-                    <button class="btn-icon-only" style="width:28px; height:28px; margin:auto;" onclick="deleteInventoryItem('${inv.id}')">
-                        <span class="material-symbols-outlined" style="font-size:16px;">delete</span>
-                    </button>
+                    <div style="display:flex; gap:0.5rem; justify-content:center;">
+                        <button class="btn btn-secondary" style="padding: 4px 10px; font-size:0.8rem;" onclick="editDurable('${d.id}')">
+                            <span class="material-symbols-outlined" style="font-size:16px;">edit</span>
+                        </button>
+                        <button class="btn btn-danger" style="padding: 4px 10px; font-size:0.8rem;" onclick="deleteDurable('${d.id}')">
+                            <span class="material-symbols-outlined" style="font-size:16px;">delete</span>
+                        </button>
+                    </div>
                 </td>
             </tr>
         `;
@@ -559,63 +601,61 @@ function renderInventoryTable() {
     });
 }
 
-function handleInventorySubmit(e) {
+function handleDurableSubmit(e) {
     e.preventDefault();
+    const id = document.getElementById("durableId").value;
+    const code = document.getElementById("durableCode").value.trim();
+    const name = document.getElementById("durableName").value.trim();
+    const category = document.getElementById("durableCategory").value;
+    const remark = document.getElementById("durableRemark").value.trim();
 
-    const date = document.getElementById("invDate").value;
-    const name = document.getElementById("invName").value;
-    const ref = document.getElementById("invRef").value;
-    const action = document.getElementById("invAction").value;
-    const qty = parseInt(document.getElementById("invQty").value) || 1;
-    const receiver = document.getElementById("invReceiver").value;
-    const inspectors = document.getElementById("invInspectors").value;
-    const auditor = document.getElementById("invAuditor").value;
-
-    const matchedItems = appState.inventory.filter(item => item.name === name);
-    let lastBalance = 0;
-    if (matchedItems.length > 0) {
-        lastBalance = matchedItems[matchedItems.length - 1].balance;
-    }
-
-    let newBalance = lastBalance;
-    if (action === "receive") {
-        newBalance += qty;
-    } else {
-        if (qty > lastBalance) {
-            alert(`สินค้าไม่เพียงพอเบิกจ่าย (คงคลังปัจจุบัน: ${lastBalance} หน่วย)`);
-            return;
+    if (id) {
+        // Edit mode
+        const durable = appState.durables.find(d => d.id === id);
+        if (durable) {
+            durable.code = code;
+            durable.name = name;
+            durable.category = category;
+            durable.remark = remark;
         }
-        newBalance -= qty;
+    } else {
+        // Add mode
+        const newDurable = {
+            id: "CUR-" + Date.now(),
+            code,
+            name,
+            category,
+            remark
+        };
+        appState.durables.push(newDurable);
     }
 
-    const newInvItem = {
-        id: "INV-" + Date.now(),
-        date,
-        name,
-        ref,
-        action,
-        qty,
-        balance: newBalance,
-        receiver,
-        inspectors,
-        auditor
-    };
-
-    appState.inventory.push(newInvItem);
     saveDataToStorage();
-
-    closeModal("inventoryModal");
-    document.getElementById("inventoryForm").reset();
-    renderInventoryTable();
+    closeModal("durableModal");
+    renderDurableTable();
 }
 
-function deleteInventoryItem(itemId) {
-    if (confirm("ต้องการลบพัสดุคลังรายการนี้?")) {
-        appState.inventory = appState.inventory.filter(item => item.id !== itemId);
+window.editDurable = function(id) {
+    const d = appState.durables.find(item => item.id === id);
+    if (!d) return;
+
+    document.getElementById("durableId").value = d.id;
+    document.getElementById("durableCode").value = d.code;
+    document.getElementById("durableName").value = d.name;
+    document.getElementById("durableCategory").value = d.category;
+    document.getElementById("durableRemark").value = d.remark || "";
+    
+    document.getElementById("durableModalTitle").innerText = "แก้ไขข้อมูลครุภัณฑ์";
+    openModal("durableModal");
+};
+
+window.deleteDurable = function(id) {
+    if (confirm("คุณต้องการลบครุภัณฑ์รายการนี้?")) {
+        appState.durables = appState.durables.filter(item => item.id !== id);
         saveDataToStorage();
-        renderInventoryTable();
+        renderDurableTable();
     }
-}
+};
 
 // ----------------------------------------------------
 // รายงานสรุปผลสถิติและประวัติขออนุมัติ
@@ -887,12 +927,12 @@ function printMonthlyReport() {
                     <tr>
                         <td>${itemIndex++}</td>
                         <td class="text-left">${item.name}</td>
-                        <td>-</td>
+                        <td>${item.durableCode || "-"}</td>
                         <td>${cat ? cat.code : "-"}</td>
-                        <td>บสค. 60 เลขที่ ${doc.docNumber || "-"}</td>
-                        <td>ตามคำสั่งที่ 4/2566</td>
+                        <td>บสค. 60 เลขที่ ${doc.bskNumber || doc.docNumber || "-"}</td>
+                        <td>${doc.orderAuthority || "ตามคำสั่งที่ 4/2566"}</td>
                         <td>${dateFormatted}</td>
-                        <td>เพื่อใช้ในงานปฏิบัติงาน</td>
+                        <td>${doc.necessityReason || "เพื่อใช้ในงานปฏิบัติงาน"}</td>
                         <td style="text-align: right;">${itemTotal.toLocaleString("th-TH", { minimumFractionDigits: 2 })}</td>
                     </tr>
                 `;
