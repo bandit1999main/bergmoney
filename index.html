@@ -415,53 +415,60 @@
             aside, header, .content, .btn {
                 display: none !important;
             }
+            @page {
+                size: A4;
+                margin: 1.2cm 1.5cm 1.0cm 1.5cm;
+            }
             .print-container {
                 display: block !important;
-                padding: 2cm;
-                font-family: "Sarabun", "TH Sarabun PSK", sans-serif;
-                font-size: 15pt;
+                padding: 0;
+                font-family: "TH Sarabun New", "TH Sarabun PSK", "Sarabun", sans-serif;
+                font-size: 16pt;
+                line-height: 1.25;
                 color: #000000;
             }
             .print-header {
                 display: flex;
                 justify-content: space-between;
-                align-items: center;
+                align-items: flex-end;
                 border-bottom: 2px solid #000000;
-                padding-bottom: 10px;
-                margin-bottom: 20px;
+                padding-bottom: 6px;
+                margin-bottom: 12px;
             }
             .print-logo {
-                height: 50px;
+                height: 38px;
+                object-fit: contain;
             }
             .memo-table {
                 width: 100%;
                 border-collapse: collapse;
-                margin-bottom: 20px;
+                margin-bottom: 12px;
             }
             .memo-table td {
-                padding: 4px;
+                padding: 2px 4px;
                 border: none;
+                vertical-align: top;
             }
             .item-table {
                 width: 100%;
                 border-collapse: collapse;
-                margin: 20px 0;
+                margin: 12px 0;
             }
             .item-table th, .item-table td {
                 border: 1px solid #000000 !important;
-                padding: 6px;
+                padding: 4px 6px;
                 text-align: center;
             }
             .item-table td.text-left {
                 text-align: left;
             }
             .sig-section {
-                margin-top: 50px;
+                margin-top: 25px;
                 display: flex;
                 justify-content: flex-end;
             }
             .sig-block {
-                width: 50%;
+                width: 45%;
                 text-align: center;
             }
         }
