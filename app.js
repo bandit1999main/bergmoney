@@ -845,80 +845,113 @@ function printDocument(docId) {
 function printMonthlyReport() {
     const selectedMonth = document.getElementById("reportMonthSelect").value;
     const monthlyDocs = appState.documents.filter(doc => doc.docDate.startsWith(selectedMonth));
-    if (monthlyDocs.length === 0) {
-        alert("ไม่มีข้อมูลที่จะพิมพ์ในเดือนที่เลือก");
-        return;
-    }
 
     const dateObj = new Date(selectedMonth + "-01");
-    const thaiMonthText = dateObj.toLocaleDateString("th-TH", { month: "long", year: "numeric" });
+    const monthName = dateObj.toLocaleDateString("th-TH", { month: "long" });
+    const yearName = dateObj.toLocaleDateString("th-TH", { year: "numeric" });
     const printSection = document.getElementById("printSection");
 
     let reportRowsHtml = "";
     let grandTotal = 0;
     let itemIndex = 1;
 
-    monthlyDocs.forEach(doc => {
-        const cat = BUDGET_RULES[doc.itemCategory];
-        doc.items.forEach(item => {
-            const itemTotal = item.qty * item.price;
-            grandTotal += itemTotal;
-            const dateFormatted = new Date(doc.docDate).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" });
+    if (monthlyDocs.length > 0) {
+        monthlyDocs.forEach(doc => {
+            const cat = BUDGET_RULES[doc.itemCategory];
+            doc.items.forEach(item => {
+                const itemTotal = item.qty * item.price;
+                grandTotal += itemTotal;
+                const dateFormatted = new Date(doc.docDate).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" });
 
-            reportRowsHtml += `
-                <tr>
-                    <td>${itemIndex++}</td>
-                    <td class="text-left">${item.name}</td>
-                    <td>-</td>
-                    <td>${cat ? cat.code : "-"}</td>
-                    <td>บสค. 60 เลขที่ ${doc.docNumber}</td>
-                    <td>ตามคำสั่งที่ 4/2566</td>
-                    <td>${dateFormatted}</td>
-                    <td>เพื่อใช้ในงานปฏิบัติงาน</td>
-                    <td style="text-align: right;">${itemTotal.toLocaleString("th-TH", { minimumFractionDigits: 2 })}</td>
-                </tr>
-            `;
+                reportRowsHtml += `
+                    <tr>
+                        <td>${itemIndex++}</td>
+                        <td class="text-left">${item.name}</td>
+                        <td>-</td>
+                        <td>${cat ? cat.code : "-"}</td>
+                        <td>บสค. 60 เลขที่ ${doc.docNumber || "-"}</td>
+                        <td>ตามคำสั่งที่ 4/2566</td>
+                        <td>${dateFormatted}</td>
+                        <td>เพื่อใช้ในงานปฏิบัติงาน</td>
+                        <td style="text-align: right;">${itemTotal.toLocaleString("th-TH", { minimumFractionDigits: 2 })}</td>
+                    </tr>
+                `;
+            });
         });
-    });
+    }
+
+    const officeName = appState.settings.officeName || "ที่ทำการไปรษณีย์มาบตาพุด";
+    const officePhone = (monthlyDocs.length > 0 && monthlyDocs[0].officePhone) ? monthlyDocs[0].officePhone : "088-987-8635";
+    const officerPosition = appState.settings.officerPosition || "หัวหน้าที่ทำการไปรษณีย์มาบตาพุด";
 
     printSection.innerHTML = `
-        <div class="print-header">
-            <img src="thailand-post-logo.png" alt="ไปรษณีย์ไทย" class="print-logo" style="height: 38px; object-fit: contain;">
-            <div style="font-weight: bold; font-size: 18pt;">แบบที่ 3</div>
+        <div class="print-header" style="position: relative; display: flex; align-items: center; justify-content: center; height: 60px; border-bottom: 2px solid #000000; margin-bottom: 18px; padding-bottom: 6px;">
+            <img src="thailand-post-logo.png" alt="ไปรษณีย์ไทย" class="print-logo" style="height: 48px; object-fit: contain; position: absolute; left: 0; bottom: 6px;">
+            <div style="font-weight: bold; font-size: 20pt; margin-bottom: 0;">บันทึกข้อความ</div>
         </div>
-        <h2 style="text-align: center; margin-bottom: 8px; font-size: 18pt;">บัญชีสรุปรายการซื้อและการจ้างประจำเดือน</h2>
-        <div style="text-align: center; margin-bottom: 15px; font-size: 15pt;">
-            ที่ทำการ: <b>ที่ทำการไปรษณีย์มาบตาพุด</b> &nbsp;&nbsp;&nbsp; ประจำเดือน <b>${thaiMonthText}</b>
-        </div>
+        <table class="memo-table" style="font-size: 11pt; margin-bottom: 18px; width: 100%;">
+            <tr>
+                <td style="width: 15%; font-weight: bold;">หน่วยงาน:</td>
+                <td style="width: 50%;">${officeName}</td>
+                <td style="width: 10%; font-weight: bold;">โทร:</td>
+                <td style="width: 25%;">${officePhone}</td>
+            </tr>
+            <tr>
+                <td style="font-weight: bold; width: 15%;">ที่:</td>
+                <td style="width: 50%;">..........................................................................................</td>
+                <td style="width: 10%; font-weight: bold;">วันที่:</td>
+                <td style="width: 25%;">.....................................................</td>
+            </tr>
+            <tr>
+                <td style="font-weight: bold; border-bottom: 1px solid #000000; padding-bottom: 6px;">เรื่อง:</td>
+                <td colspan="3" style="border-bottom: 1px solid #000000; padding-bottom: 6px;">บัญชีสรุปรายการซื้อและการจ้างประจำเดือน .................................................</td>
+            </tr>
+            <tr>
+                <td style="font-weight: bold; padding-top: 6px;">เรียน:</td>
+                <td colspan="3" style="padding-top: 6px;">ฝปข.2</td>
+            </tr>
+        </table>
         
-        <table class="item-table" style="font-size: 13pt;">
+        <p style="text-indent: 1.5cm; margin-bottom: 8px; font-size: 11pt; line-height: 1.35; text-align: justify;">
+            ตามคำสั่ง ปณท ที่ 4/2566 เรื่อง มอบอำนาจการซื้อและการจ้างพัสดุบางประเภทให้หัวหน้าที่ทำการต่างๆ ของ บริษัท ไปรษณีย์จำกัด สั่ง ณ วันที่ 4 ตุลาคม พ.ศ. 2566 กำหนดให้ที่ทำการและศูนย์ไปรษณีย์ต่างๆ จัดทำบัญชีสรุปรายการซื้อและการจ้างให้สำนักงานไปรษณีย์ต้นสังกัดทราบอย่างช้าไม่เกิน วันที่ 10 ของเดือนถัดไปนั้น
+        </p>
+        <p style="text-indent: 1.5cm; margin-bottom: 12px; font-size: 11pt; line-height: 1.35;">
+            ${officeName} ขอสรุปการซื้อและการจ้างประจำเดือน <b>${monthName}</b> พ.ศ. <b>${yearName}</b> มาเพื่อทราบ
+        </p>
+
+        <p style="font-weight: bold; margin-bottom: 8px; font-size: 11pt;">มีการซื้อและการจ้างรายละเอียดดังนี้</p>
+
+        <table class="item-table" style="font-size: 10pt; border-collapse: collapse; width: 100%; margin: 14px 0;">
             <thead>
                 <tr>
-                    <th style="padding: 4px;">ลำดับ</th>
+                    <th style="width: 5%; padding: 4px;">No</th>
                     <th style="padding: 4px;">รายการ</th>
-                    <th style="padding: 4px;">รหัสครุภัณฑ์</th>
-                    <th style="padding: 4px;">รหัสบัญชี</th>
-                    <th style="padding: 4px;">เลขที่ บสค.60</th>
-                    <th style="padding: 4px;">คำสั่งอนุมัติ</th>
-                    <th style="padding: 4px;">ว.ด.ป.</th>
-                    <th style="padding: 4px;">เหตุผลความจำเป็น</th>
-                    <th style="padding: 4px;">จำนวนเงิน (บาท)</th>
+                    <th style="width: 12%; padding: 4px;">รหัสครุภัณฑ์</th>
+                    <th style="width: 10%; padding: 4px;">รหัสบัญชี</th>
+                    <th style="width: 18%; padding: 4px;">เลขที่ บสค.60</th>
+                    <th style="width: 15%; padding: 4px;">คำสั่งอนุญาตซื้อ/จ้าง</th>
+                    <th style="width: 10%; padding: 4px;">ว.ด.ป.</th>
+                    <th style="width: 15%; padding: 4px;">เหตุความจำเป็น</th>
+                    <th style="width: 12%; padding: 4px;">จำนวนเงิน</th>
                 </tr>
             </thead>
             <tbody>
-                ${reportRowsHtml}
+                ${reportRowsHtml ? reportRowsHtml : '<tr><td colspan="9" style="text-align: center; padding: 12px; color: #555;">ไม่มีรายการจัดซื้อจัดจ้างในเดือนนี้</td></tr>'}
                 <tr>
-                    <td colspan="8" style="text-align: right; font-weight: bold; padding: 6px;">รวมเงินทั้งสิ้น</td>
-                    <td style="text-align: right; font-weight: bold; padding: 6px;">${grandTotal.toLocaleString("th-TH", { minimumFractionDigits: 2 })}</td>
+                    <td colspan="8" style="text-align: right; font-weight: bold; padding: 5px 6px;">รวมเป็นเงิน</td>
+                    <td style="text-align: right; font-weight: bold; padding: 5px 6px;">${grandTotal.toLocaleString("th-TH", { minimumFractionDigits: 2 })}</td>
                 </tr>
             </tbody>
         </table>
 
-        <div class="sig-section" style="margin-top: 25px;">
-            <div class="sig-block" style="width: 45%; text-align: center; font-size: 15pt; line-height: 1.35;">
-                <p style="margin-bottom: 35px;">ลงชื่อ..............................................................</p>
-                <p style="font-weight: bold;">(นายนิพล ทรัพย์หมื่นแสน)</p>
-                <p>หัวหน้าที่ทำการไปรษณีย์มาบตาพุด</p>
+        ${reportRowsHtml ? '' : '<p style="font-size: 11pt; margin-top: 10px; margin-bottom: 10px;">ไม่มีการซื้อและการจ้าง</p>'}
+
+        <p style="font-size: 11pt; margin-top: 10px; margin-bottom: 16px;">จึงเรียนมาเพื่อโปรดทราบ</p>
+
+        <div class="sig-section" style="margin-top: 45px; display: flex; justify-content: flex-end;">
+            <div class="sig-block" style="width: 45%; text-align: center; font-size: 11pt; line-height: 1.35;">
+                <p style="margin-bottom: 8px;">(...................................................)</p>
+                <p style="font-weight: bold;">${officerPosition}</p>
             </div>
         </div>
     `;
