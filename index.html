@@ -779,6 +779,44 @@
         </div>
     </div>
 
+    <!-- Register Screen -->
+    <div class="auth-overlay hidden" id="registerScreen">
+        <div class="auth-card" style="max-width: 480px; width: 90%;">
+            <div style="margin-bottom: 1rem;">
+                <img src="thailand-post-logo.png" alt="ไปรษณีย์ไทย" style="height: 48px; object-fit: contain;">
+            </div>
+            <h2>ลงทะเบียนเข้าใช้งาน</h2>
+            <p class="auth-subtitle" style="margin-bottom: 1.5rem;">กรุณากรอกข้อมูลส่วนตัวเพื่อส่งขออนุมัติการใช้งานระบบ</p>
+            
+            <form id="registerForm" style="text-align: left; width: 100%;">
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="regOfficerName" style="font-weight: 600; display: block; margin-bottom: 0.35rem; font-size: 0.9rem;">ชื่อ-นามสกุล</label>
+                    <input type="text" id="regOfficerName" required style="width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 0.95rem;">
+                </div>
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="regOfficerPosition" style="font-weight: 600; display: block; margin-bottom: 0.35rem; font-size: 0.9rem;">ตำแหน่ง</label>
+                    <input type="text" id="regOfficerPosition" required placeholder="เช่น หน.ปณ.มาบตาพุด" style="width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 0.95rem;">
+                </div>
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="regOfficeName" style="font-weight: 600; display: block; margin-bottom: 0.35rem; font-size: 0.9rem;">หน่วยงาน/ที่ทำการ</label>
+                    <input type="text" id="regOfficeName" required placeholder="เช่น ที่ทำการไปรษณีย์มาบตาพุด" style="width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 0.95rem;">
+                </div>
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label for="regOfficePhone" style="font-weight: 600; display: block; margin-bottom: 0.35rem; font-size: 0.9rem;">เบอร์โทรศัพท์หน่วยงาน</label>
+                    <input type="text" id="regOfficePhone" required placeholder="เช่น 088-987-8635" style="width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 0.95rem;">
+                </div>
+                
+                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.75rem; font-size: 1rem; font-weight: 600; display: flex; justify-content: center; align-items: center; gap: 0.5rem;">
+                    <span class="material-symbols-outlined">send</span> ส่งขออนุมัติใช้งาน
+                </button>
+            </form>
+            
+            <button class="btn btn-secondary" id="regCancelBtn" style="margin-top: 1rem; width: 100%; display: flex; justify-content: center; align-items: center;">
+                ยกเลิก (ออกจากระบบ)
+            </button>
+        </div>
+    </div>
+
     <!-- Main App Wrapper (hidden until authenticated) -->
     <div class="app-wrapper" id="appWrapper">
 

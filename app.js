@@ -125,27 +125,13 @@ async function handleUserSignIn(user) {
         let userProfile = await getUser(user.uid);
 
         if (!userProfile) {
-            // ผู้ใช้ใหม่ - ตรวจสอบว่าเป็นคนแรกหรือไม่
-            const allUsers = await getAllUsers();
-            const isFirstUser = allUsers.length === 0;
-
-            const newProfile = {
-                displayName: user.displayName || "ไม่ระบุชื่อ",
-                email: user.email || "",
-                photoURL: user.photoURL || "",
-                role: isFirstUser ? "admin" : "user",
-                approved: isFirstUser ? true : false,
-                createdAt: getServerTimestamp(),
-                lastLoginAt: getServerTimestamp()
-            };
-
-            await createOrUpdateUser(user.uid, newProfile);
-            userProfile = { id: user.uid, ...newProfile, role: newProfile.role, approved: newProfile.approved };
+            // ผู้ใช้ใหม่ - แสดงหน้าจอลงทะเบียนกรอกข้อมูลส่วนตัว
+            showRegisterScreen(user);
+            return;
         } else {
             // อัปเดตเวลาเข้าใช้ล่าสุด
             await createOrUpdateUser(user.uid, {
                 lastLoginAt: getServerTimestamp(),
-                displayName: user.displayName || userProfile.displayName,
                 photoURL: user.photoURL || userProfile.photoURL
             });
         }
@@ -165,6 +151,7 @@ async function handleUserSignIn(user) {
         // ซ่อนหน้าจอ auth, แสดงแอปหลัก
         hideAuthScreen();
         hidePendingScreen();
+        hideRegisterScreen();
         showMainApp();
 
         await initApp();
@@ -219,6 +206,7 @@ async function checkAndMigrateLocalData() {
 function showAuthScreen() {
     document.getElementById("authScreen").classList.remove("hidden");
     document.getElementById("pendingScreen").classList.add("hidden");
+    document.getElementById("registerScreen").classList.add("hidden");
     document.getElementById("appWrapper").classList.remove("visible");
 
     // รีเซ็ตปุ่ม
@@ -233,8 +221,79 @@ function hideAuthScreen() {
     document.getElementById("authScreen").classList.add("hidden");
 }
 
+function showRegisterScreen(user) {
+    document.getElementById("authScreen").classList.add("hidden");
+    document.getElementById("pendingScreen").classList.add("hidden");
+    document.getElementById("registerScreen").classList.remove("hidden");
+    document.getElementById("appWrapper").classList.remove("visible");
+
+    // กรอกข้อมูลเบื้องต้น
+    document.getElementById("regOfficerName").value = user.displayName || "";
+    document.getElementById("regOfficerPosition").value = "";
+    document.getElementById("regOfficeName").value = "ที่ทำการไปรษณีย์มาบตาพุด";
+    document.getElementById("regOfficePhone").value = "088-987-8635";
+
+    const registerForm = document.getElementById("registerForm");
+    registerForm.onsubmit = async (e) => {
+        e.preventDefault();
+
+        const officerName = document.getElementById("regOfficerName").value.trim();
+        const officerPosition = document.getElementById("regOfficerPosition").value.trim();
+        const officeName = document.getElementById("regOfficeName").value.trim();
+        const officePhone = document.getElementById("regOfficePhone").value.trim();
+
+        try {
+            // ตรวจสอบว่าเป็นผู้ใช้คนแรกในระบบหรือไม่
+            const allUsers = await getAllUsers();
+            const isFirstUser = allUsers.length === 0;
+
+            const newProfile = {
+                displayName: officerName,
+                email: user.email || "",
+                photoURL: user.photoURL || "",
+                officerName,
+                officerPosition,
+                officeName,
+                officePhone,
+                role: isFirstUser ? "admin" : "user",
+                approved: isFirstUser ? true : false,
+                createdAt: getServerTimestamp(),
+                lastLoginAt: getServerTimestamp()
+            };
+
+            await createOrUpdateUser(user.uid, newProfile);
+            const userProfile = { id: user.uid, ...newProfile };
+
+            hideRegisterScreen();
+
+            if (!userProfile.approved) {
+                showPendingScreen(user);
+            } else {
+                currentUser = user;
+                currentUserProfile = userProfile;
+                await checkAndMigrateLocalData();
+                showMainApp();
+                await initApp();
+                setupEventHandlers();
+                updateUserUI();
+                switchTab("dashboard");
+            }
+        } catch (error) {
+            console.error("Error during registration:", error);
+            alert("เกิดข้อผิดพลาดในการบันทึกข้อมูลลงทะเบียน: " + error.message);
+        }
+    };
+
+    document.getElementById("regCancelBtn").onclick = handleLogout;
+}
+
+function hideRegisterScreen() {
+    document.getElementById("registerScreen").classList.add("hidden");
+}
+
 function showPendingScreen(user) {
     document.getElementById("authScreen").classList.add("hidden");
+    document.getElementById("registerScreen").classList.add("hidden");
     document.getElementById("pendingScreen").classList.remove("hidden");
     document.getElementById("appWrapper").classList.remove("visible");
     document.getElementById("pendingUserEmail").innerText = user.email || "";
