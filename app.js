@@ -700,7 +700,7 @@ function printDocument(docId) {
     const dateFormatted = docDateObj.toLocaleDateString("th-TH", { day: "numeric", month: "long", year: "numeric" });
 
     const catKeys = Object.keys(BUDGET_RULES);
-    let categoryCheckboxesHtml = `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; margin: 8px 0; font-size: 15pt; border: 1px solid #000000; padding: 8px 12px; border-radius: 4px; line-height: 1.3;">`;
+    let categoryCheckboxesHtml = `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; margin: 8px 0; font-size: 16pt; border: 1px solid #000000; padding: 8px 12px; border-radius: 4px; line-height: 1.3;">`;
     catKeys.forEach(k => {
         const isChecked = doc.itemCategory === k;
         const symbol = isChecked ? "[ ✓ ]" : "[ &nbsp; ]";
@@ -730,18 +730,18 @@ function printDocument(docId) {
     printSection.innerHTML = `
         <div class="print-header">
             <img src="thailand-post-logo.png" alt="ไปรษณีย์ไทย" class="print-logo" style="height: 38px; object-fit: contain;">
-            <div style="font-weight: bold; font-size: 22pt;">บันทึกข้อความ</div>
+            <div style="font-weight: bold; font-size: 16pt;">บันทึกข้อความ</div>
         </div>
         <table class="memo-table" style="font-size: 16pt;">
             <tr>
                 <td style="width: 15%; font-weight: bold;">หน่วยงาน:</td>
-                <td style="width: 55%;">${doc.officeName} &nbsp;&nbsp; โทร. ${doc.officePhone}</td>
-                <td style="width: 10%; font-weight: bold;">ที่:</td>
-                <td style="width: 20%;">${doc.docNumber || "-"}</td>
+                <td colspan="3">${doc.officeName} &nbsp;&nbsp; โทร. ${doc.officePhone}</td>
             </tr>
             <tr>
                 <td style="font-weight: bold;">วันที่:</td>
-                <td colspan="3">${dateFormatted}</td>
+                <td style="width: 55%;">${dateFormatted}</td>
+                <td style="width: 10%; font-weight: bold;">ที่:</td>
+                <td style="width: 20%;">${doc.docNumber || "-"}</td>
             </tr>
             <tr>
                 <td style="font-weight: bold;">เรื่อง:</td>
@@ -759,12 +759,12 @@ function printDocument(docId) {
 
         ${categoryCheckboxesHtml}
 
-        <div style="display: flex; gap: 30px; margin: 8px 0; font-weight: bold; font-size: 15pt;">
+        <div style="display: flex; gap: 30px; margin: 8px 0; font-weight: bold; font-size: 16pt;">
             <span>[ ${doc.hasQuotation === 'true' ? '✓' : '&nbsp;'} ] มีใบเสนอราคา</span>
             <span>[ ${doc.hasQuotation === 'false' ? '✓' : '&nbsp;'} ] ไม่มีใบเสนอราคา</span>
         </div>
 
-        <table class="item-table" style="font-size: 15pt; border-collapse: collapse; width: 100%;">
+        <table class="item-table" style="font-size: 16pt; border-collapse: collapse; width: 100%;">
             <thead>
                 <tr>
                     <th rowspan="2" style="width: 5%; vertical-align: middle;">ลำดับ</th>
@@ -774,11 +774,11 @@ function printDocument(docId) {
                     <th rowspan="2" style="width: 12%; vertical-align: middle;">หมายเหตุ</th>
                 </tr>
                 <tr>
-                    <th style="font-size: 13pt; width: 12%;">ว.ด.ป.</th>
-                    <th style="font-size: 13pt; width: 8%;">จำนวน/ปริมาณ</th>
-                    <th style="font-size: 13pt; width: 12%;">จำนวนเงิน (บาท)</th>
-                    <th style="font-size: 13pt; width: 8%;">จำนวน/ปริมาณ</th>
-                    <th style="font-size: 13pt; width: 12%;">จำนวนเงิน (บาท)</th>
+                    <th style="font-size: 16pt; width: 12%;">ว.ด.ป.</th>
+                    <th style="font-size: 16pt; width: 8%;">จำนวน/ปริมาณ</th>
+                    <th style="font-size: 16pt; width: 12%;">จำนวนเงิน (บาท)</th>
+                    <th style="font-size: 16pt; width: 8%;">จำนวน/ปริมาณ</th>
+                    <th style="font-size: 16pt; width: 12%;">จำนวนเงิน (บาท)</th>
                 </tr>
             </thead>
             <tbody>
