@@ -794,9 +794,9 @@ function printDocument(docId) {
             จึงเรียนมาเพื่อโปรดพิจารณาอนุญาต หากเห็นชอบจักได้ดำเนินการตามที่ ปณท มอบอำนาจการซื้อและการจ้างไว้ให้ต่อไป จักขอบคุณยิ่ง
         </p>
 
-        <div class="sig-section" style="margin-top: 25px; display: flex; justify-content: flex-end;">
+        <div class="sig-section" style="margin-top: 45px; display: flex; justify-content: flex-end;">
             <div class="sig-block" style="width: 45%; text-align: center; font-size: 11pt; line-height: 1.35;">
-                <p style="margin-bottom: 35px;">(ลงชื่อ)..............................................................</p>
+                <p style="margin-bottom: 8px;">(ลงชื่อ)..............................................................</p>
                 <p style="font-weight: bold;">(${doc.requesterName})</p>
                 <p>${doc.requesterPosition}</p>
                 <p style="margin-top: 5px;">............../............../..............</p>
