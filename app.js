@@ -20,7 +20,11 @@ const BUDGET_RULES = {
 let appState = {
     settings: {
         group: "group2",
-        monthlyBudget: 30000
+        monthlyBudget: 30000,
+        officeName: "ที่ทำการไปรษณีย์มาบตาพุด",
+        officerName: "นายนิพล ทรัพย์หมื่นแสน",
+        officerPosition: "หน.ปณ.มาบตาพุด",
+        customLimits: {}
     },
     documents: [],
     inventory: []
@@ -43,6 +47,9 @@ function initApp() {
                 if (!appState.settings.customLimits) {
                     appState.settings.customLimits = {};
                 }
+                if (!appState.settings.officeName) appState.settings.officeName = "ที่ทำการไปรษณีย์มาบตาพุด";
+                if (!appState.settings.officerName) appState.settings.officerName = "นายนิพล ทรัพย์หมื่นแสน";
+                if (!appState.settings.officerPosition) appState.settings.officerPosition = "หน.ปณ.มาบตาพุด";
             }
             if (parsed.documents) appState.documents = parsed.documents;
             if (parsed.inventory) appState.inventory = parsed.inventory;
@@ -102,6 +109,25 @@ function initApp() {
     const setMonthlyBudgetInput = document.getElementById("setMonthlyBudget");
     if (setMonthlyBudgetInput) setMonthlyBudgetInput.value = appState.settings.monthlyBudget;
     
+    const setOfficeNameInput = document.getElementById("setOfficeName");
+    if (setOfficeNameInput) setOfficeNameInput.value = appState.settings.officeName;
+
+    const setOfficerNameInput = document.getElementById("setOfficerName");
+    if (setOfficerNameInput) setOfficerNameInput.value = appState.settings.officerName;
+
+    const setOfficerPositionInput = document.getElementById("setOfficerPosition");
+    if (setOfficerPositionInput) setOfficerPositionInput.value = appState.settings.officerPosition;
+
+    // ตั้งค่าดีฟอลต์ในหน้าฟอร์ม บสค.60 จากค่าตั้งค่าหน่วยงาน
+    const officeNameInput = document.getElementById("officeName");
+    if (officeNameInput) officeNameInput.value = appState.settings.officeName;
+
+    const requesterNameInput = document.getElementById("requesterName");
+    if (requesterNameInput) requesterNameInput.value = appState.settings.officerName;
+
+    const requesterPositionInput = document.getElementById("requesterPosition");
+    if (requesterPositionInput) requesterPositionInput.value = appState.settings.officerPosition;
+
     renderLimitsSettingsTable();
     updateUIElements();
     
@@ -451,6 +477,15 @@ function handleBskSubmit(e) {
     alert("บันทึกข้อมูลคำขอจัดซื้อจัดจ้าง บสค. 60 เรียบร้อย!");
     
     document.getElementById("bskForm").reset();
+    
+    // ตั้งค่าดีฟอลต์ในหน้าฟอร์ม บสค.60 จากค่าตั้งค่าหน่วยงาน
+    const offNameIn = document.getElementById("officeName");
+    const reqNameIn = document.getElementById("requesterName");
+    const reqPosIn = document.getElementById("requesterPosition");
+    if (offNameIn) offNameIn.value = appState.settings.officeName;
+    if (reqNameIn) reqNameIn.value = appState.settings.officerName;
+    if (reqPosIn) reqPosIn.value = appState.settings.officerPosition;
+
     document.getElementById("formTableBody").innerHTML = `
         <tr>
             <td style="text-align: center;">1</td>
@@ -906,6 +941,19 @@ function handleSettingsSubmit(e) {
     e.preventDefault();
     appState.settings.group = document.getElementById("setGroupName").value;
     appState.settings.monthlyBudget = parseFloat(document.getElementById("setMonthlyBudget").value) || 0;
+    appState.settings.officeName = document.getElementById("setOfficeName").value.trim();
+    appState.settings.officerName = document.getElementById("setOfficerName").value.trim();
+    appState.settings.officerPosition = document.getElementById("setOfficerPosition").value.trim();
+
+    // ปรับปรุงค่าดีฟอลต์ในฟอร์ม บสค.60 ทันที
+    const officeNameInput = document.getElementById("officeName");
+    if (officeNameInput) officeNameInput.value = appState.settings.officeName;
+
+    const requesterNameInput = document.getElementById("requesterName");
+    if (requesterNameInput) requesterNameInput.value = appState.settings.officerName;
+
+    const requesterPositionInput = document.getElementById("requesterPosition");
+    if (requesterPositionInput) requesterPositionInput.value = appState.settings.officerPosition;
     
     // บันทึกเพดานวงเงินรายหมวดหมู่
     const customLimits = {};
