@@ -1,6 +1,6 @@
 // ----------------------------------------------------
 // ระบบจัดซื้อจัดจ้าง บสค. 60 - ไปรษณีย์ไทย
-// v2.0 - Firebase Authentication & Firestore
+// v2.0 - Firebase Authentication & Firestore (Integrated)
 // ----------------------------------------------------
 
 import { loginWithGoogle, logout, onAuthChange } from "./auth.js";
@@ -10,9 +10,10 @@ import {
     addDocument as fsAddDocument,
     getDocuments as fsGetDocuments,
     fsDeleteDocument,
-    addInventoryItem as fsAddInventoryItem,
-    getInventory as fsGetInventory,
-    fsDeleteInventoryItem,
+    addDurable,
+    getDurables,
+    saveDurable,
+    fsDeleteDurable,
     createOrUpdateUser,
     getUser,
     getAllUsers,
@@ -45,10 +46,14 @@ let appState = {
     settings: {
         group: "group2",
         monthlyBudget: 30000,
+        officeName: "ที่ทำการไปรษณีย์มาบตาพุด",
+        officerName: "นายนิพล ทรัพย์หมื่นแสน",
+        officerPosition: "หน.ปณ.มาบตาพุด",
         customLimits: {}
     },
     documents: [],
-    inventory: []
+    inventory: [],
+    durables: []
 };
 
 let currentUser = null;
@@ -188,11 +193,11 @@ async function checkAndMigrateLocalData() {
         const parsed = JSON.parse(savedData);
         const hasFirestoreData = await checkIfDataExists();
 
-        if (!hasFirestoreData && (parsed.documents?.length > 0 || parsed.inventory?.length > 0)) {
+        if (!hasFirestoreData && (parsed.documents?.length > 0 || parsed.inventory?.length > 0 || parsed.durables?.length > 0)) {
             const confirmMigrate = confirm(
                 "พบข้อมูลเดิมในเครื่อง (localStorage)\n" +
                 `- เอกสาร: ${parsed.documents?.length || 0} รายการ\n` +
-                `- พัสดุ: ${parsed.inventory?.length || 0} รายการ\n\n` +
+                `- ครุภัณฑ์/พัสดุ: ${parsed.durables?.length || parsed.inventory?.length || 0} รายการ\n\n` +
                 "ต้องการย้ายข้อมูลไปยัง Cloud (Firebase) หรือไม่?"
             );
 
@@ -291,20 +296,26 @@ async function initApp() {
         if (!appState.settings.customLimits) {
             appState.settings.customLimits = {};
         }
+        if (!appState.settings.officeName) appState.settings.officeName = "ที่ทำการไปรษณีย์มาบตาพุด";
+        if (!appState.settings.officerName) appState.settings.officerName = "นายนิพล ทรัพย์หมื่นแสน";
+        if (!appState.settings.officerPosition) appState.settings.officerPosition = "หน.ปณ.มาบตาพุด";
     }
 
     // โหลด Documents จาก Firestore
     appState.documents = await fsGetDocuments();
 
-    // โหลด Inventory จาก Firestore
-    appState.inventory = await fsGetInventory();
+    // โหลด Durables จาก Firestore
+    appState.durables = await getDurables();
+    if (!appState.durables || appState.durables.length === 0) {
+        appState.durables = [
+            { id: "CUR-001", code: "51090902-001", name: "กระดาษ A4 Double A 80g", category: "stationery", qty: 10, remark: "ใช้ประจำสำนักงาน" }
+        ];
+        await addDurable(appState.durables[0]);
+    }
 
     // กำหนดวันที่เริ่มต้น
     const docDateInput = document.getElementById("docDate");
     if (docDateInput) docDateInput.value = new Date().toISOString().substring(0, 10);
-
-    const invDateInput = document.getElementById("invDate");
-    if (invDateInput) invDateInput.value = new Date().toISOString().substring(0, 10);
 
     renderMonthSelectOptions();
 
@@ -314,6 +325,25 @@ async function initApp() {
 
     const setMonthlyBudgetInput = document.getElementById("setMonthlyBudget");
     if (setMonthlyBudgetInput) setMonthlyBudgetInput.value = appState.settings.monthlyBudget;
+
+    const setOfficeNameInput = document.getElementById("setOfficeName");
+    if (setOfficeNameInput) setOfficeNameInput.value = appState.settings.officeName;
+
+    const setOfficerNameInput = document.getElementById("setOfficerName");
+    if (setOfficerNameInput) setOfficerNameInput.value = appState.settings.officerName;
+
+    const setOfficerPositionInput = document.getElementById("setOfficerPosition");
+    if (setOfficerPositionInput) setOfficerPositionInput.value = appState.settings.officerPosition;
+
+    // ตั้งค่าดีฟอลต์ในหน้าฟอร์ม บสค.60 จากค่าตั้งค่าหน่วยงาน
+    const officeNameInput = document.getElementById("officeName");
+    if (officeNameInput) officeNameInput.value = appState.settings.officeName;
+
+    const requesterNameInput = document.getElementById("requesterName");
+    if (requesterNameInput) requesterNameInput.value = appState.settings.officerName;
+
+    const requesterPositionInput = document.getElementById("requesterPosition");
+    if (requesterPositionInput) requesterPositionInput.value = appState.settings.officerPosition;
 
     renderLimitsSettingsTable();
     updateUIElements();
@@ -355,9 +385,37 @@ function setupEventHandlers() {
     document.getElementById("itemCategory").addEventListener("change", checkQuotaLimits);
     document.getElementById("formTableBody").addEventListener("input", handleTableInput);
 
-    // Dialog จัดการคลังพัสดุ
-    document.getElementById("addInventoryBtn").addEventListener("click", () => openModal("inventoryModal"));
-    document.getElementById("inventoryForm").addEventListener("submit", handleInventorySubmit);
+    // Dialog จัดการครุภัณฑ์
+    const addDurableBtn = document.getElementById("addDurableBtn");
+    if (addDurableBtn) {
+        addDurableBtn.addEventListener("click", () => {
+            document.getElementById("durableForm").reset();
+            document.getElementById("durableId").value = "";
+            document.getElementById("durableModalTitle").innerText = "เพิ่มข้อมูลครุภัณฑ์";
+            openModal("durableModal");
+        });
+    }
+    const durableForm = document.getElementById("durableForm");
+    if (durableForm) {
+        durableForm.addEventListener("submit", handleDurableSubmit);
+    }
+
+    const importDurableBtn = document.getElementById("importDurableBtn");
+    if (importDurableBtn) {
+        importDurableBtn.addEventListener("click", () => {
+            document.getElementById("durableImportFileInput").click();
+        });
+    }
+
+    const durableImportFileInput = document.getElementById("durableImportFileInput");
+    if (durableImportFileInput) {
+        durableImportFileInput.addEventListener("change", importDurablesCSV);
+    }
+
+    const exportDurableBtn = document.getElementById("exportDurableBtn");
+    if (exportDurableBtn) {
+        exportDurableBtn.addEventListener("click", exportDurablesCSV);
+    }
 
     // บันทึกการตั้งค่า
     document.getElementById("settingsForm").addEventListener("submit", handleSettingsSubmit);
@@ -388,7 +446,7 @@ function switchTab(tabId) {
         "dashboard": "แดชบอร์ดสรุปงบประมาณและโควตาวงเงิน",
         "bsk60-form": "บันทึกข้อความขออนุมัติจัดซื้อจัดจ้าง บสค. 60",
         "history": "ประวัติคำขอจัดซื้อจัดจ้าง บสค. 60",
-        "inventory": "บัญชีควบคุมพัสดุคลังพัสดุ (แบบที่ 2)",
+        "inventory": "จัดการทะเบียนข้อมูลครุภัณฑ์",
         "monthly-report": "สรุปรายการซื้อและการจ้างประจำเดือน (แบบที่ 3)",
         "settings": "ตั้งค่าข้อมูลที่ทำการไปรษณีย์และรหัสหน่วยงาน",
         "user-management": "จัดการผู้ใช้งานระบบ",
@@ -401,7 +459,7 @@ function switchTab(tabId) {
     } else if (tabId === "history") {
         renderHistoryTable();
     } else if (tabId === "inventory") {
-        renderInventoryTable();
+        renderDurableTable();
     } else if (tabId === "monthly-report") {
         renderMonthlyReportTable();
     } else if (tabId === "user-management") {
@@ -412,7 +470,7 @@ function switchTab(tabId) {
 }
 
 // ----------------------------------------------------
-// ฟังก์ชัน Auto-suggest ค้นหาคลังพัสดุ/บิลเก่า
+// ฟังก์ชัน Auto-suggest ค้นหาครุภัณฑ์/บิลเก่า
 // ----------------------------------------------------
 function bindAutoSuggest(row) {
     const nameInput = row.querySelector(".item-name");
@@ -432,60 +490,73 @@ function showSuggestions(input, boxElement) {
     const val = input.value.trim().toLowerCase();
     boxElement.innerHTML = "";
 
-    const itemsHistory = [];
-    const seen = new Set();
-
-    appState.documents.forEach(doc => {
-        doc.items.forEach(item => {
-            const name = item.name.trim();
-            if (!seen.has(name)) {
-                seen.add(name);
-                itemsHistory.push({
-                    name: name,
-                    lastDate: doc.docDate,
-                    lastQty: item.qty,
-                    lastPrice: item.price
-                });
-            }
-        });
-    });
-
-    appState.inventory.forEach(inv => {
-        const name = inv.name.trim();
-        if (!seen.has(name) && inv.action === "receive") {
-            seen.add(name);
-            itemsHistory.push({
-                name: name,
-                lastDate: inv.date,
-                lastQty: inv.qty,
-                lastPrice: 0
-            });
-        }
-    });
-
-    const filtered = itemsHistory.filter(i => i.name.toLowerCase().includes(val));
-
-    if (filtered.length === 0) {
+    if (!appState.durables || appState.durables.length === 0) {
         boxElement.style.display = "none";
         return;
     }
 
-    filtered.forEach(item => {
+    const suggestions = appState.durables.filter(d => 
+        d.name.toLowerCase().includes(val) || 
+        d.code.toLowerCase().includes(val)
+    );
+
+    if (suggestions.length === 0) {
+        boxElement.style.display = "none";
+        return;
+    }
+
+    suggestions.forEach(d => {
         const div = document.createElement("div");
         div.className = "suggest-item";
-        const dateFormatted = new Date(item.lastDate).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" });
-        div.innerHTML = `
-            <strong>${item.name}</strong>
-            <span class="suggest-item-desc">ครั้งล่าสุด: ${dateFormatted} | จำนวน: ${item.lastQty} | ${item.lastPrice ? `${item.lastPrice}฿` : 'ไม่มีประวัติราคา'}</span>
-        `;
+        div.style.padding = "8px 12px";
+        div.style.cursor = "pointer";
+        div.style.borderBottom = "1px solid var(--border-color)";
+        div.innerHTML = `<strong>${d.name}</strong> <span style="font-size:0.8rem; color:var(--text-secondary);">(${d.code})</span>`;
 
         div.addEventListener("click", () => {
-            input.value = item.name;
+            input.value = d.name;
             const row = input.closest("tr");
-            row.querySelector(".item-last-date").value = item.lastDate;
-            row.querySelector(".item-last-qty").value = item.lastQty;
-            row.querySelector(".item-last-price").value = item.lastPrice || 0;
+            
+            const codeInput = row.querySelector(".item-durable-code");
+            if (codeInput) codeInput.value = d.code;
+            
+            if (d.category) {
+                const categorySelect = document.getElementById("itemCategory");
+                if (categorySelect) {
+                    categorySelect.value = d.category;
+                    checkQuotaLimits();
+                }
+            }
 
+            // ค้นหาประวัติจัดซื้อจัดจ้างครั้งล่าสุดสำหรับครุภัณฑ์ตัวนี้
+            let lastDoc = null;
+            let lastItem = null;
+            for (let i = appState.documents.length - 1; i >= 0; i--) {
+                const doc = appState.documents[i];
+                const item = doc.items.find(it => it.name.trim() === d.name.trim());
+                if (item) {
+                    lastDoc = doc;
+                    lastItem = item;
+                    break;
+                }
+            }
+
+            if (lastDoc && lastItem) {
+                const lastDateInput = row.querySelector(".item-last-date");
+                if (lastDateInput) lastDateInput.value = lastDoc.docDate;
+                const lastQtyInput = row.querySelector(".item-last-qty");
+                if (lastQtyInput) lastQtyInput.value = lastItem.qty;
+                const lastPriceInput = row.querySelector(".item-last-price");
+                if (lastPriceInput) lastPriceInput.value = lastItem.price;
+            } else {
+                const lastDateInput = row.querySelector(".item-last-date");
+                if (lastDateInput) lastDateInput.value = "";
+                const lastQtyInput = row.querySelector(".item-last-qty");
+                if (lastQtyInput) lastQtyInput.value = "";
+                const lastPriceInput = row.querySelector(".item-last-price");
+                if (lastPriceInput) lastPriceInput.value = "";
+            }
+            
             boxElement.style.display = "none";
             calculateFormTotal();
         });
@@ -589,6 +660,9 @@ function addFormItemRow() {
                 <input type="text" class="item-name" placeholder="ระบุรายละเอียดสิ่งของ (พิมพ์เพื่อค้นหาประวัติ)" required style="width: 100%;">
                 <div class="suggest-box"></div>
             </td>
+            <td>
+                <input type="text" class="item-durable-code" placeholder="เช่น 51090902-001" style="width: 100%;">
+            </td>
             <td><input type="date" class="item-last-date" style="width: 100%;"></td>
             <td><input type="number" class="item-last-qty" placeholder="จำนวน" style="width: 100%; text-align: center;"></td>
             <td><input type="number" class="item-last-price" placeholder="0.00" min="0" step="0.01" style="width: 100%; text-align: right;"></td>
@@ -633,7 +707,10 @@ async function handleBskSubmit(e) {
     const docDate = document.getElementById("docDate").value;
     const officeName = document.getElementById("officeName").value;
     const officePhone = document.getElementById("officePhone").value;
-    const docNumber = document.getElementById("docNumber").value;
+    const memoNumber = document.getElementById("memoNumber").value;
+    const bskNumber = document.getElementById("bskNumber").value;
+    const orderAuthority = document.getElementById("orderAuthority").value;
+    const necessityReason = document.getElementById("necessityReason").value;
     const hasQuotation = document.querySelector('input[name="hasQuotation"]:checked').value;
 
     const items = [];
@@ -641,13 +718,14 @@ async function handleBskSubmit(e) {
     const rows = document.querySelectorAll("#formTableBody tr");
     rows.forEach(row => {
         const name = row.querySelector(".item-name").value;
+        const durableCode = row.querySelector(".item-durable-code").value.trim();
         const lastDate = row.querySelector(".item-last-date").value;
         const lastQty = row.querySelector(".item-last-qty").value;
         const lastPrice = row.querySelector(".item-last-price").value;
         const qty = parseFloat(row.querySelector(".item-qty").value) || 1;
         const price = parseFloat(row.querySelector(".item-price").value) || 0;
 
-        items.push({ name, lastDate, lastQty, lastPrice, qty, price });
+        items.push({ name, durableCode, lastDate, lastQty, lastPrice, qty, price });
         total += qty * price;
     });
 
@@ -655,7 +733,8 @@ async function handleBskSubmit(e) {
     const requesterPosition = document.getElementById("requesterPosition").value;
 
     const newDoc = {
-        docNumber,
+        memoNumber,
+        bskNumber,
         docDate,
         officeName,
         officePhone,
@@ -665,6 +744,8 @@ async function handleBskSubmit(e) {
         total,
         requesterName,
         requesterPosition,
+        orderAuthority,
+        necessityReason,
         createdBy: currentUser ? currentUser.email : "",
         createdAt: getServerTimestamp()
     };
@@ -677,16 +758,51 @@ async function handleBskSubmit(e) {
         // อัปเดต state ในเครื่อง
         appState.documents.unshift(newDoc);
 
+        // อัปเดตยอดคงเหลือครุภัณฑ์โดยอัตโนมัติ
+        if (appState.durables && appState.durables.length > 0) {
+            for (const item of items) {
+                let durable = null;
+                if (item.durableCode) {
+                    durable = appState.durables.find(d => d.code === item.durableCode);
+                } else if (item.name) {
+                    durable = appState.durables.find(d => d.name.trim().toLowerCase() === item.name.trim().toLowerCase());
+                }
+                if (durable) {
+                    durable.qty = (durable.qty || 0) + (parseInt(item.qty) || 0);
+                    // อัปเดตขึ้น Firestore
+                    await saveDurable(durable.id, durable);
+                }
+            }
+            renderDurableTable();
+        }
+
         alert("บันทึกข้อมูลคำขอจัดซื้อจัดจ้าง บสค. 60 เรียบร้อย!");
 
         // รีเซ็ตฟอร์ม
         document.getElementById("bskForm").reset();
+        
+        // ตั้งค่าดีฟอลต์ในหน้าฟอร์ม บสค.60 จากค่าตั้งค่าหน่วยงาน
+        const offNameIn = document.getElementById("officeName");
+        const reqNameIn = document.getElementById("requesterName");
+        const reqPosIn = document.getElementById("requesterPosition");
+        if (offNameIn) offNameIn.value = appState.settings.officeName;
+        if (reqNameIn) reqNameIn.value = appState.settings.officerName;
+        if (reqPosIn) reqPosIn.value = appState.settings.officerPosition;
+
+        const orderAuthIn = document.getElementById("orderAuthority");
+        const necReasonIn = document.getElementById("necessityReason");
+        if (orderAuthIn) orderAuthIn.value = "ตามคำสั่งที่ 4/2566";
+        if (necReasonIn) necReasonIn.value = "เพื่อใช้ในงานปฏิบัติงาน";
+
         document.getElementById("formTableBody").innerHTML = `
             <tr>
                 <td style="text-align: center;">1</td>
                 <td class="suggest-wrapper">
                     <input type="text" class="item-name" placeholder="ระบุรายละเอียดสิ่งของ (พิมพ์เพื่อค้นหาประวัติ)" required style="width: 100%;">
                     <div class="suggest-box"></div>
+                </td>
+                <td>
+                    <input type="text" class="item-durable-code" placeholder="เช่น 51090902-001" style="width: 100%;">
                 </td>
                 <td><input type="date" class="item-last-date" style="width: 100%;"></td>
                 <td><input type="number" class="item-last-qty" placeholder="จำนวน" style="width: 100%; text-align: center;"></td>
@@ -710,36 +826,38 @@ async function handleBskSubmit(e) {
 }
 
 // ----------------------------------------------------
-// คลังพัสดุ (Firestore)
+// ทะเบียนข้อมูลครุภัณฑ์ (Firestore)
 // ----------------------------------------------------
-function renderInventoryTable() {
-    const tbody = document.getElementById("inventoryTableBody");
+function renderDurableTable() {
+    const tbody = document.getElementById("durableTableBody");
+    if (!tbody) return;
     tbody.innerHTML = "";
 
-    if (appState.inventory.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; color:var(--text-secondary);">ไม่มีข้อมูลในคลังสินค้า</td></tr>`;
+    if (appState.durables.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-secondary);">ไม่มีข้อมูลทะเบียนครุภัณฑ์</td></tr>`;
         return;
     }
 
-    appState.inventory.forEach(inv => {
-        const dateFormatted = new Date(inv.date).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" });
-        const isReceive = inv.action === "receive";
-
+    appState.durables.forEach(d => {
+        const cat = BUDGET_RULES[d.category];
+        const catName = cat ? cat.name : "-";
+        const qtyVal = typeof d.qty !== 'undefined' ? d.qty : 0;
         const row = `
             <tr>
-                <td>${dateFormatted}</td>
-                <td style="font-weight:600;">${inv.name}</td>
-                <td>${inv.ref}</td>
-                <td style="color:var(--success); font-weight:600;">${isReceive ? `+ ${inv.qty}` : '-'}</td>
-                <td style="color:#EF4444; font-weight:600;">${!isReceive ? `- ${inv.qty}` : '-'}</td>
-                <td style="font-weight:600;">${inv.balance}</td>
-                <td>${inv.receiver || "-"}</td>
-                <td>${inv.inspectors || "-"}</td>
-                <td>${inv.auditor || "-"}</td>
+                <td style="font-weight:600;">${d.code}</td>
+                <td>${d.name}</td>
+                <td>${catName}</td>
+                <td style="text-align:center;">${qtyVal}</td>
+                <td>${d.remark || "-"}</td>
                 <td>
-                    <button class="btn-icon-only" style="width:28px; height:28px; margin:auto;" onclick="window._deleteInventoryItem('${inv.id}')">
-                        <span class="material-symbols-outlined" style="font-size:16px;">delete</span>
-                    </button>
+                    <div style="display:flex; gap:0.5rem; justify-content:center;">
+                        <button class="btn btn-secondary" style="padding: 4px 10px; font-size:0.8rem;" onclick="editDurable('${d.id}')">
+                            <span class="material-symbols-outlined" style="font-size:16px;">edit</span>
+                        </button>
+                        <button class="btn btn-danger" style="padding: 4px 10px; font-size:0.8rem;" onclick="deleteDurable('${d.id}')">
+                            <span class="material-symbols-outlined" style="font-size:16px;">delete</span>
+                        </button>
+                    </div>
                 </td>
             </tr>
         `;
@@ -747,75 +865,82 @@ function renderInventoryTable() {
     });
 }
 
-async function handleInventorySubmit(e) {
+async function handleDurableSubmit(e) {
     e.preventDefault();
+    const id = document.getElementById("durableId").value;
+    const code = document.getElementById("durableCode").value.trim();
+    const name = document.getElementById("durableName").value.trim();
+    const category = document.getElementById("durableCategory").value;
+    const qty = parseInt(document.getElementById("durableQty").value) || 0;
+    const remark = document.getElementById("durableRemark").value.trim();
 
-    const date = document.getElementById("invDate").value;
-    const name = document.getElementById("invName").value;
-    const ref = document.getElementById("invRef").value;
-    const action = document.getElementById("invAction").value;
-    const qty = parseInt(document.getElementById("invQty").value) || 1;
-    const receiver = document.getElementById("invReceiver").value;
-    const inspectors = document.getElementById("invInspectors").value;
-    const auditor = document.getElementById("invAuditor").value;
-
-    const matchedItems = appState.inventory.filter(item => item.name === name);
-    let lastBalance = 0;
-    if (matchedItems.length > 0) {
-        lastBalance = matchedItems[matchedItems.length - 1].balance;
-    }
-
-    let newBalance = lastBalance;
-    if (action === "receive") {
-        newBalance += qty;
-    } else {
-        if (qty > lastBalance) {
-            alert(`สินค้าไม่เพียงพอเบิกจ่าย (คงคลังปัจจุบัน: ${lastBalance} หน่วย)`);
-            return;
-        }
-        newBalance -= qty;
-    }
-
-    const newInvItem = {
-        date,
+    const durableData = {
+        code,
         name,
-        ref,
-        action,
+        category,
         qty,
-        balance: newBalance,
-        receiver,
-        inspectors,
-        auditor,
-        createdBy: currentUser ? currentUser.email : "",
-        createdAt: getServerTimestamp()
+        remark,
+        updatedAt: getServerTimestamp()
     };
 
     try {
-        const firestoreId = await fsAddInventoryItem(newInvItem);
-        newInvItem.id = firestoreId;
-        appState.inventory.push(newInvItem);
+        if (id) {
+            // โหมดแก้ไข
+            await saveDurable(id, durableData);
+            const durable = appState.durables.find(d => d.id === id);
+            if (durable) {
+                durable.code = code;
+                durable.name = name;
+                durable.category = category;
+                durable.qty = qty;
+                durable.remark = remark;
+            }
+            alert("แก้ไขข้อมูลครุภัณฑ์เรียบร้อย!");
+        } else {
+            // โหมดเพิ่มใหม่
+            durableData.createdAt = getServerTimestamp();
+            const firestoreId = await addDurable(durableData);
+            durableData.id = firestoreId;
+            appState.durables.push(durableData);
+            alert("เพิ่มข้อมูลครุภัณฑ์เรียบร้อย!");
+        }
 
-        closeModal("inventoryModal");
-        document.getElementById("inventoryForm").reset();
-        renderInventoryTable();
+        closeModal("durableModal");
+        renderDurableTable();
     } catch (error) {
-        console.error("Error saving inventory:", error);
+        console.error("Error saving durable asset:", error);
         alert("เกิดข้อผิดพลาดในการบันทึก: " + error.message);
     }
 }
 
-async function deleteInventoryItem(itemId) {
-    if (confirm("ต้องการลบพัสดุคลังรายการนี้?")) {
+window.editDurable = function(id) {
+    const d = appState.durables.find(item => item.id === id);
+    if (!d) return;
+
+    document.getElementById("durableId").value = d.id;
+    document.getElementById("durableCode").value = d.code;
+    document.getElementById("durableName").value = d.name;
+    document.getElementById("durableCategory").value = d.category;
+    document.getElementById("durableQty").value = typeof d.qty !== 'undefined' ? d.qty : 0;
+    document.getElementById("durableRemark").value = d.remark || "";
+    
+    document.getElementById("durableModalTitle").innerText = "แก้ไขข้อมูลครุภัณฑ์";
+    openModal("durableModal");
+};
+
+window.deleteDurable = async function(id) {
+    if (confirm("คุณต้องการลบครุภัณฑ์รายการนี้?")) {
         try {
-            await fsDeleteInventoryItem(itemId);
-            appState.inventory = appState.inventory.filter(item => item.id !== itemId);
-            renderInventoryTable();
+            await fsDeleteDurable(id);
+            appState.durables = appState.durables.filter(item => item.id !== id);
+            renderDurableTable();
+            alert("ลบข้อมูลครุภัณฑ์เรียบร้อย");
         } catch (error) {
-            console.error("Error deleting inventory:", error);
+            console.error("Error deleting durable asset:", error);
             alert("เกิดข้อผิดพลาดในการลบ: " + error.message);
         }
     }
-}
+};
 
 // ----------------------------------------------------
 // ประวัติเอกสาร (Firestore)
@@ -838,7 +963,7 @@ function renderHistoryTable() {
 
         const row = `
             <tr>
-                <td style="font-weight:600;">บสค. 60 เลขที่ ${doc.docNumber}</td>
+                <td style="font-weight:600;">บสค. 60 เลขที่ ${doc.bskNumber || doc.docNumber || "-"}</td>
                 <td>${dateFormatted}</td>
                 <td>${cat ? cat.name : "ทั่วไป"}</td>
                 <td>${quotationBadge}</td>
@@ -866,6 +991,7 @@ async function deleteDocument(docId) {
             await fsDeleteDocument(docId);
             appState.documents = appState.documents.filter(doc => doc.id !== docId);
             renderHistoryTable();
+            alert("ลบเอกสารออกจากฐานข้อมูลสำเร็จ");
         } catch (error) {
             console.error("Error deleting document:", error);
             alert("เกิดข้อผิดพลาดในการลบ: " + error.message);
@@ -882,8 +1008,10 @@ function renderMonthSelectOptions() {
 
     const months = {};
     appState.documents.forEach(doc => {
-        const monthYear = doc.docDate.substring(0, 7);
-        months[monthYear] = true;
+        if (doc.docDate) {
+            const monthYear = doc.docDate.substring(0, 7);
+            months[monthYear] = true;
+        }
     });
 
     const currentMonth = new Date().toISOString().substring(0, 7);
@@ -901,7 +1029,7 @@ function renderMonthlyReportTable() {
     const tbody = document.getElementById("monthlyReportTableBody");
     tbody.innerHTML = "";
 
-    const monthlyDocs = appState.documents.filter(doc => doc.docDate.startsWith(selectedMonth));
+    const monthlyDocs = appState.documents.filter(doc => doc.docDate && doc.docDate.startsWith(selectedMonth));
     let grandTotal = 0;
 
     if (monthlyDocs.length === 0) {
@@ -923,12 +1051,12 @@ function renderMonthlyReportTable() {
                 <tr>
                     <td>${itemIndex++}</td>
                     <td style="font-weight:600;">${item.name} <span style="font-size:0.75rem; color:var(--text-secondary); display:block;">(จำนวน ${item.qty} ชิ้น)</span></td>
-                    <td>-</td>
+                    <td>${item.durableCode || "-"}</td>
                     <td>${cat ? cat.code : "-"}</td>
-                    <td>บสค. 60 เลขที่ ${doc.docNumber}</td>
-                    <td>ตามคำสั่งที่ 4/2566</td>
+                    <td>บสค. 60 เลขที่ ${doc.bskNumber || doc.docNumber || "-"}</td>
+                    <td>${doc.orderAuthority || "ตามคำสั่งที่ 4/2566"}</td>
                     <td>${dateFormatted}</td>
-                    <td>เพื่อใช้ในกิจการหน่วยงาน</td>
+                    <td>${doc.necessityReason || "เพื่อใช้ในงานปฏิบัติงาน"}</td>
                     <td style="text-align:right; font-weight:600;">${itemTotal.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿</td>
                 </tr>
             `;
@@ -972,7 +1100,7 @@ function printDocument(docId) {
     const dateFormatted = docDateObj.toLocaleDateString("th-TH", { day: "numeric", month: "long", year: "numeric" });
 
     const catKeys = Object.keys(BUDGET_RULES);
-    let categoryCheckboxesHtml = `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; margin: 8px 0; font-size: 12pt; border: 1px solid #000000; padding: 8px 12px; border-radius: 4px; line-height: 1.3;">`;
+    let categoryCheckboxesHtml = `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; margin: 10px 0; font-size: 10pt; border: 1px solid #000000; padding: 10px 14px; border-radius: 4px; line-height: 1.35;">`;
     catKeys.forEach(k => {
         const isChecked = doc.itemCategory === k;
         const symbol = isChecked ? "[ ✓ ]" : "[ &nbsp; ]";
@@ -982,43 +1110,45 @@ function printDocument(docId) {
     categoryCheckboxesHtml += `</div>`;
 
     printSection.innerHTML = `
-        <div class="print-header" style="position: relative; display: flex; align-items: center; justify-content: center; height: 50px;">
-            <img src="thailand-post-logo.png" alt="ไปรษณีย์ไทย" class="print-logo" style="height: 38px; object-fit: contain; position: absolute; left: 0; bottom: 6px;">
-            <div style="font-weight: bold; font-size: 12pt; margin-bottom: 6px;">บันทึกข้อความ</div>
+        <div class="print-header" style="position: relative; display: flex; align-items: center; justify-content: center; height: 60px; border-bottom: 2px solid #000000; margin-bottom: 18px; padding-bottom: 6px;">
+            <img src="thailand-post-logo.png" alt="ไปรษณีย์ไทย" class="print-logo" style="height: 48px; object-fit: contain; position: absolute; left: 0; bottom: 6px;">
+            <div style="font-weight: bold; font-size: 20pt; margin-bottom: 0;">บันทึกข้อความ</div>
         </div>
-        <table class="memo-table" style="font-size: 12pt;">
+        <table class="memo-table" style="font-size: 11pt; margin-bottom: 18px; width: 100%;">
             <tr>
                 <td style="width: 15%; font-weight: bold;">หน่วยงาน:</td>
-                <td colspan="3">${doc.officeName} &nbsp;&nbsp; โทร. ${doc.officePhone}</td>
+                <td style="width: 50%;">${doc.officeName}</td>
+                <td style="width: 10%; font-weight: bold;">โทร:</td>
+                <td style="width: 25%;">${doc.officePhone}</td>
             </tr>
             <tr>
                 <td style="font-weight: bold; width: 15%;">ที่:</td>
-                <td style="width: 45%;">${doc.docNumber || "-"}</td>
+                <td style="width: 50%;">${doc.memoNumber || "-"}</td>
                 <td style="width: 10%; font-weight: bold;">วันที่:</td>
-                <td style="width: 30%;">${dateFormatted}</td>
+                <td style="width: 25%;">${dateFormatted}</td>
             </tr>
             <tr>
                 <td style="font-weight: bold; border-bottom: 1px solid #000000; padding-bottom: 6px;">เรื่อง:</td>
-                <td colspan="3" style="border-bottom: 1px solid #000000; padding-bottom: 6px;">ขอความเห็นชอบการจัดซื้อ/จัดจ้าง (ที่มอบอำนาจการซื้อและการจ้างตามคำสั่ง ปณท ที่ 4/2566)</td>
+                <td colspan="3" style="border-bottom: 1px solid #000000; padding-bottom: 6px;">ขอความเห็นชอบการจัดซื้อ/จัดจ้าง (ที่มอบอำนาจการซื้อและการจ้าง ${doc.orderAuthority || 'ตามคำสั่ง ปณท ที่ 4/2566'})</td>
             </tr>
             <tr>
                 <td style="font-weight: bold; padding-top: 6px;">เรียน:</td>
                 <td colspan="3" style="padding-top: 6px;">ฝปข.2</td>
             </tr>
         </table>
-
-        <p style="text-indent: 1.5cm; margin-bottom: 6px; font-size: 12pt; line-height: 1.3;">
-            ด้วย <b>ปณ.มาบตาพุด</b> มีความจำเป็นต้องการจัดซื้อและจัดจ้างพัสดุบางประเภท (ที่มอบอำนาจการซื้อและการจ้างตามคำสั่ง ปณท ที่ 4/2566) ดังนี้:
+        
+        <p style="text-indent: 1.5cm; margin-bottom: 8px; font-size: 11pt; line-height: 1.35; text-align: justify;">
+            ด้วย <b>${doc.officeName}</b> มีความจำเป็นต้องการจัดซื้อและจัดจ้างพัสดุบางประเภท (ที่มอบอำนาจการซื้อและการจ้าง ${doc.orderAuthority || 'ตามคำสั่ง ปณท ที่ 4/2566'}) ดังนี้:
         </p>
 
         ${categoryCheckboxesHtml}
 
-        <div style="display: flex; gap: 30px; margin: 8px 0; font-weight: bold; font-size: 12pt;">
+        <div style="display: flex; gap: 30px; margin: 10px 0; font-weight: bold; font-size: 11pt;">
             <span>[ ${doc.hasQuotation === 'true' ? '✓' : '&nbsp;'} ] มีใบเสนอราคา</span>
             <span>[ ${doc.hasQuotation === 'false' ? '✓' : '&nbsp;'} ] ไม่มีใบเสนอราคา</span>
         </div>
 
-        <table class="item-table" style="font-size: 12pt; border-collapse: collapse; width: 100%;">
+        <table class="item-table" style="font-size: 10.5pt; border-collapse: collapse; width: 100%; margin: 14px 0;">
             <thead>
                 <tr>
                     <th rowspan="2" style="width: 5%; vertical-align: middle;">ลำดับ</th>
@@ -1028,30 +1158,30 @@ function printDocument(docId) {
                     <th rowspan="2" style="width: 12%; vertical-align: middle;">หมายเหตุ</th>
                 </tr>
                 <tr>
-                    <th style="font-size: 12pt; width: 12%;">ว.ด.ป.</th>
-                    <th style="font-size: 12pt; width: 8%;">จำนวน/ปริมาณ</th>
-                    <th style="font-size: 12pt; width: 12%;">จำนวนเงิน (บาท)</th>
-                    <th style="font-size: 12pt; width: 8%;">จำนวน/ปริมาณ</th>
-                    <th style="font-size: 12pt; width: 12%;">จำนวนเงิน (บาท)</th>
+                    <th style="font-size: 10.5pt; width: 12%;">ว.ด.ป.</th>
+                    <th style="font-size: 10.5pt; width: 8%;">จำนวน/ปริมาณ</th>
+                    <th style="font-size: 10.5pt; width: 12%;">จำนวนเงิน (บาท)</th>
+                    <th style="font-size: 10.5pt; width: 8%;">จำนวน/ปริมาณ</th>
+                    <th style="font-size: 10.5pt; width: 12%;">จำนวนเงิน (บาท)</th>
                 </tr>
             </thead>
             <tbody>
                 ${itemsRowsHtml}
                 <tr>
-                    <td colspan="6" style="text-align: right; font-weight: bold; padding: 4px 6px;">รวมเป็นเงินทั้งสิ้น</td>
-                    <td style="text-align: right; font-weight: bold; padding: 4px 6px;">${doc.total.toLocaleString("th-TH", { minimumFractionDigits: 2 })}</td>
+                    <td colspan="6" style="text-align: right; font-weight: bold; padding: 5px 6px;">รวมเป็นเงินทั้งสิ้น</td>
+                    <td style="text-align: right; font-weight: bold; padding: 5px 6px;">${doc.total.toLocaleString("th-TH", { minimumFractionDigits: 2 })}</td>
                     <td></td>
                 </tr>
             </tbody>
         </table>
 
-        <p style="text-indent: 1.5cm; margin-bottom: 12px; font-size: 12pt; line-height: 1.3;">
+        <p style="text-indent: 1.5cm; margin-bottom: 16px; font-size: 11pt; line-height: 1.35;">
             จึงเรียนมาเพื่อโปรดพิจารณาอนุญาต หากเห็นชอบจักได้ดำเนินการตามที่ ปณท มอบอำนาจการซื้อและการจ้างไว้ให้ต่อไป จักขอบคุณยิ่ง
         </p>
 
-        <div class="sig-section" style="margin-top: 15px; display: flex; justify-content: flex-end;">
-            <div class="sig-block" style="width: 45%; text-align: center; font-size: 12pt; line-height: 1.3;">
-                <p style="margin-bottom: 30px;">(ลงชื่อ)..............................................................</p>
+        <div class="sig-section" style="margin-top: 45px; display: flex; justify-content: flex-end;">
+            <div class="sig-block" style="width: 45%; text-align: center; font-size: 11pt; line-height: 1.35;">
+                <p style="margin-bottom: 8px;">(ลงชื่อ)..............................................................</p>
                 <p style="font-weight: bold;">(${doc.requesterName})</p>
                 <p>${doc.requesterPosition}</p>
                 <p style="margin-top: 5px;">............../............../..............</p>
@@ -1064,81 +1194,115 @@ function printDocument(docId) {
 
 function printMonthlyReport() {
     const selectedMonth = document.getElementById("reportMonthSelect").value;
-    const monthlyDocs = appState.documents.filter(doc => doc.docDate.startsWith(selectedMonth));
-    if (monthlyDocs.length === 0) {
-        alert("ไม่มีข้อมูลที่จะพิมพ์ในเดือนที่เลือก");
-        return;
-    }
+    const monthlyDocs = appState.documents.filter(doc => doc.docDate && doc.docDate.startsWith(selectedMonth));
 
     const dateObj = new Date(selectedMonth + "-01");
-    const thaiMonthText = dateObj.toLocaleDateString("th-TH", { month: "long", year: "numeric" });
+    const monthName = dateObj.toLocaleDateString("th-TH", { month: "long" });
+    const yearName = dateObj.toLocaleDateString("th-TH", { year: "numeric" });
     const printSection = document.getElementById("printSection");
 
     let reportRowsHtml = "";
     let grandTotal = 0;
     let itemIndex = 1;
 
-    monthlyDocs.forEach(doc => {
-        const cat = BUDGET_RULES[doc.itemCategory];
-        doc.items.forEach(item => {
-            const itemTotal = item.qty * item.price;
-            grandTotal += itemTotal;
-            const dateFormatted = new Date(doc.docDate).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" });
+    if (monthlyDocs.length > 0) {
+        monthlyDocs.forEach(doc => {
+            const cat = BUDGET_RULES[doc.itemCategory];
+            doc.items.forEach(item => {
+                const itemTotal = item.qty * item.price;
+                grandTotal += itemTotal;
+                const dateFormatted = new Date(doc.docDate).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" });
 
-            reportRowsHtml += `
-                <tr>
-                    <td>${itemIndex++}</td>
-                    <td class="text-left">${item.name}</td>
-                    <td>-</td>
-                    <td>${cat ? cat.code : "-"}</td>
-                    <td>บสค. 60 เลขที่ ${doc.docNumber}</td>
-                    <td>ตามคำสั่งที่ 4/2566</td>
-                    <td>${dateFormatted}</td>
-                    <td>เพื่อใช้ในงานปฏิบัติงาน</td>
-                    <td style="text-align: right;">${itemTotal.toLocaleString("th-TH", { minimumFractionDigits: 2 })}</td>
-                </tr>
-            `;
+                reportRowsHtml += `
+                    <tr>
+                        <td>${itemIndex++}</td>
+                        <td class="text-left">${item.name}</td>
+                        <td>${item.durableCode || "-"}</td>
+                        <td>${cat ? cat.code : "-"}</td>
+                        <td>บสค. 60 เลขที่ ${doc.bskNumber || doc.docNumber || "-"}</td>
+                        <td>${doc.orderAuthority || "ตามคำสั่งที่ 4/2566"}</td>
+                        <td>${dateFormatted}</td>
+                        <td>${doc.necessityReason || "เพื่อใช้ในงานปฏิบัติงาน"}</td>
+                        <td style="text-align: right;">${itemTotal.toLocaleString("th-TH", { minimumFractionDigits: 2 })}</td>
+                    </tr>
+                `;
+            });
         });
-    });
+    }
+
+    const officeName = appState.settings.officeName || "ที่ทำการไปรษณีย์มาบตาพุด";
+    const officePhone = (monthlyDocs.length > 0 && monthlyDocs[0].officePhone) ? monthlyDocs[0].officePhone : "088-987-8635";
+    const officerPosition = appState.settings.officerPosition || "หัวหน้าที่ทำการไปรษณีย์มาบตาพุด";
+    const todayFormatted = new Date().toLocaleDateString("th-TH", { day: "numeric", month: "long", year: "numeric" });
 
     printSection.innerHTML = `
-        <div class="print-header">
-            <img src="thailand-post-logo.png" alt="ไปรษณีย์ไทย" class="print-logo" style="height: 38px; object-fit: contain;">
-            <div style="font-weight: bold; font-size: 18pt;">แบบที่ 3</div>
+        <div class="print-header" style="position: relative; display: flex; align-items: center; justify-content: center; height: 60px; border-bottom: 2px solid #000000; margin-bottom: 18px; padding-bottom: 6px;">
+            <img src="thailand-post-logo.png" alt="ไปรษณีย์ไทย" class="print-logo" style="height: 48px; object-fit: contain; position: absolute; left: 0; bottom: 6px;">
+            <div style="font-weight: bold; font-size: 20pt; margin-bottom: 0;">บันทึกข้อความ</div>
         </div>
-        <h2 style="text-align: center; margin-bottom: 8px; font-size: 18pt;">บัญชีสรุปรายการซื้อและการจ้างประจำเดือน</h2>
-        <div style="text-align: center; margin-bottom: 15px; font-size: 15pt;">
-            ที่ทำการ: <b>ที่ทำการไปรษณีย์มาบตาพุด</b> &nbsp;&nbsp;&nbsp; ประจำเดือน <b>${thaiMonthText}</b>
-        </div>
+        <table class="memo-table" style="font-size: 11pt; margin-bottom: 18px; width: 100%;">
+            <tr>
+                <td style="width: 15%; font-weight: bold;">หน่วยงาน:</td>
+                <td style="width: 50%;">${officeName}</td>
+                <td style="width: 10%; font-weight: bold;">โทร:</td>
+                <td style="width: 25%;">${officePhone}</td>
+            </tr>
+            <tr>
+                <td style="font-weight: bold; width: 15%;">ที่:</td>
+                <td style="width: 50%;">ปณท ปข.2(21150)/......................................................</td>
+                <td style="width: 10%; font-weight: bold;">วันที่:</td>
+                <td style="width: 25%;">${todayFormatted}</td>
+            </tr>
+            <tr>
+                <td style="font-weight: bold; border-bottom: 1px solid #000000; padding-bottom: 6px;">เรื่อง:</td>
+                <td colspan="3" style="border-bottom: 1px solid #000000; padding-bottom: 6px;">บัญชีสรุปรายการซื้อและการจ้างประจำเดือน <b>${monthName} ${yearName}</b></td>
+            </tr>
+            <tr>
+                <td style="font-weight: bold; padding-top: 6px;">เรียน:</td>
+                <td colspan="3" style="padding-top: 6px;">ฝปข.2</td>
+            </tr>
+        </table>
+        
+        <p style="text-indent: 1.5cm; margin-bottom: 8px; font-size: 11pt; line-height: 1.35; text-align: justify;">
+            ตามคำสั่ง ปณท ที่ 4/2566 เรื่อง มอบอำนาจการซื้อและการจ้างพัสดุบางประเภทให้หัวหน้าที่ทำการต่างๆ ของ บริษัท ไปรษณีย์จำกัด สั่ง ณ วันที่ 4 ตุลาคม พ.ศ. 2566 กำหนดให้ที่ทำการและศูนย์ไปรษณีย์ต่างๆ จัดทำบัญชีสรุปรายการซื้อและการจ้างให้สำนักงานไปรษณีย์ต้นสังกัดทราบอย่างช้าไม่เกิน วันที่ 10 ของเดือนถัดไปนั้น
+        </p>
+        <p style="text-indent: 1.5cm; margin-bottom: 12px; font-size: 11pt; line-height: 1.35;">
+            ${officeName} ขอสรุปการซื้อและการจ้างประจำเดือน <b>${monthName}</b> <b>${yearName}</b> มาเพื่อทราบ
+        </p>
 
-        <table class="item-table" style="font-size: 13pt;">
+        <p style="font-weight: bold; margin-bottom: 8px; font-size: 11pt;">มีการซื้อและการจ้างรายละเอียดดังนี้</p>
+
+        <table class="item-table" style="font-size: 10pt; border-collapse: collapse; width: 100%; margin: 14px 0;">
             <thead>
                 <tr>
-                    <th style="padding: 4px;">ลำดับ</th>
+                    <th style="width: 5%; padding: 4px;">No</th>
                     <th style="padding: 4px;">รายการ</th>
-                    <th style="padding: 4px;">รหัสครุภัณฑ์</th>
-                    <th style="padding: 4px;">รหัสบัญชี</th>
-                    <th style="padding: 4px;">เลขที่ บสค.60</th>
-                    <th style="padding: 4px;">คำสั่งอนุมัติ</th>
-                    <th style="padding: 4px;">ว.ด.ป.</th>
-                    <th style="padding: 4px;">เหตุผลความจำเป็น</th>
-                    <th style="padding: 4px;">จำนวนเงิน (บาท)</th>
+                    <th style="width: 12%; padding: 4px;">รหัสครุภัณฑ์</th>
+                    <th style="width: 10%; padding: 4px;">รหัสบัญชี</th>
+                    <th style="width: 18%; padding: 4px;">เลขที่ บสค.60</th>
+                    <th style="width: 15%; padding: 4px;">คำสั่งอนุญาตซื้อ/จ้าง</th>
+                    <th style="width: 10%; padding: 4px;">ว.ด.ป.</th>
+                    <th style="width: 15%; padding: 4px;">เหตุความจำเป็น</th>
+                    <th style="width: 12%; padding: 4px;">จำนวนเงิน</th>
                 </tr>
             </thead>
             <tbody>
-                ${reportRowsHtml}
+                ${reportRowsHtml ? reportRowsHtml : '<tr><td colspan="9" style="text-align: center; padding: 12px; color: #555;">ไม่มีรายการจัดซื้อจัดจ้างในเดือนนี้</td></tr>'}
                 <tr>
-                    <td colspan="8" style="text-align: right; font-weight: bold; padding: 6px;">รวมเงินทั้งสิ้น</td>
-                    <td style="text-align: right; font-weight: bold; padding: 6px;">${grandTotal.toLocaleString("th-TH", { minimumFractionDigits: 2 })}</td>
+                    <td colspan="8" style="text-align: right; font-weight: bold; padding: 5px 6px;">รวมเป็นเงิน</td>
+                    <td style="text-align: right; font-weight: bold; padding: 5px 6px;">${grandTotal.toLocaleString("th-TH", { minimumFractionDigits: 2 })}</td>
                 </tr>
             </tbody>
         </table>
 
-        <div class="sig-section" style="margin-top: 25px;">
-            <div class="sig-block" style="width: 45%; text-align: center; font-size: 15pt; line-height: 1.35;">
-                <p style="margin-bottom: 35px;">ลงชื่อ..............................................................</p>
-                <p style="font-weight: bold;">(นายนิพล ทรัพย์หมื่นแสน)</p>
-                <p>หัวหน้าที่ทำการไปรษณีย์มาบตาพุด</p>
+        ${reportRowsHtml ? '' : '<p style="font-size: 11pt; margin-top: 10px; margin-bottom: 10px;">ไม่มีการซื้อและการจ้าง</p>'}
+
+        <p style="font-size: 11pt; margin-top: 10px; margin-bottom: 16px;">จึงเรียนมาเพื่อโปรดทราบ</p>
+
+        <div class="sig-section" style="margin-top: 45px; display: flex; justify-content: flex-end;">
+            <div class="sig-block" style="width: 45%; text-align: center; font-size: 11pt; line-height: 1.35;">
+                <p style="margin-top: 40px; font-weight: bold; margin-bottom: 2px;">(${appState.settings.officerName || "นายนิพล ทรัพย์หมื่นแสน"})</p>
+                <p>${officerPosition}</p>
             </div>
         </div>
     `;
@@ -1157,18 +1321,27 @@ window.closeModal = function(modalId) {
     document.getElementById(modalId).classList.remove("active");
 };
 
-// Expose to global scope สำหรับ inline onclick ใน dynamic HTML
+// Expose to global scope
 window._printDocument = printDocument;
 window._deleteDocument = deleteDocument;
-window._deleteInventoryItem = deleteInventoryItem;
-
-// Alias เดิมสำหรับ static HTML (onclick="closeModal(...)") 
-// openModal/closeModal ถูกกำหนดด้านบนแล้ว
 
 async function handleSettingsSubmit(e) {
     e.preventDefault();
     appState.settings.group = document.getElementById("setGroupName").value;
     appState.settings.monthlyBudget = parseFloat(document.getElementById("setMonthlyBudget").value) || 0;
+    appState.settings.officeName = document.getElementById("setOfficeName").value.trim();
+    appState.settings.officerName = document.getElementById("setOfficerName").value.trim();
+    appState.settings.officerPosition = document.getElementById("setOfficerPosition").value.trim();
+
+    // ปรับปรุงค่าดีฟอลต์ในฟอร์ม บสค.60 ทันที
+    const officeNameInput = document.getElementById("officeName");
+    if (officeNameInput) officeNameInput.value = appState.settings.officeName;
+
+    const requesterNameInput = document.getElementById("requesterName");
+    if (requesterNameInput) requesterNameInput.value = appState.settings.officerName;
+
+    const requesterPositionInput = document.getElementById("requesterPosition");
+    if (requesterPositionInput) requesterPositionInput.value = appState.settings.officerPosition;
 
     // บันทึกเพดานวงเงินรายหมวดหมู่
     const customLimits = {};
@@ -1207,7 +1380,7 @@ async function handleSettingsSubmit(e) {
 
 function updateUIElements() {
     const currentMonthStr = new Date().toISOString().substring(0, 7);
-    const currentMonthDocs = appState.documents.filter(doc => doc.docDate.startsWith(currentMonthStr));
+    const currentMonthDocs = appState.documents.filter(doc => doc.docDate && doc.docDate.startsWith(currentMonthStr));
     const totalSpentThisMonth = currentMonthDocs.reduce((sum, doc) => sum + doc.total, 0);
 
     document.getElementById("statCount").innerText = `${currentMonthDocs.length} รายการ`;
@@ -1223,6 +1396,7 @@ function updateUIElements() {
 
 function renderBudgetQuotaTable(currentMonthStr) {
     const tbody = document.getElementById("dashboardBudgetTableBody");
+    if (!tbody) return;
     tbody.innerHTML = "";
 
     const userGroup = appState.settings.group;
@@ -1246,7 +1420,7 @@ function renderBudgetQuotaTable(currentMonthStr) {
         }
 
         const spentThisMonth = appState.documents
-            .filter(doc => doc.docDate.startsWith(currentMonthStr) && doc.itemCategory === key)
+            .filter(doc => doc.docDate && doc.docDate.startsWith(currentMonthStr) && doc.itemCategory === key)
             .reduce((sum, doc) => sum + doc.total, 0);
 
         const remaining = (monthlyLimit !== undefined && monthlyLimit !== Infinity) ? (monthlyLimit - spentThisMonth) : Infinity;
@@ -1286,7 +1460,7 @@ async function importBackupData(e) {
     fileReader.onload = async function (event) {
         try {
             const parsed = JSON.parse(event.target.result);
-            if (parsed.documents || parsed.inventory || parsed.settings) {
+            if (parsed.documents || parsed.inventory || parsed.settings || parsed.durables) {
                 const confirmImport = confirm(
                     "นำเข้าข้อมูลจะแทนที่ข้อมูลปัจจุบันบนระบบ Cloud\nดำเนินการต่อหรือไม่?"
                 );
@@ -1296,7 +1470,7 @@ async function importBackupData(e) {
 
                 // โหลดข้อมูลใหม่จาก Firestore
                 appState.documents = await fsGetDocuments();
-                appState.inventory = await fsGetInventory();
+                appState.durables = await getDurables();
                 const settings = await fsLoadSettings();
                 if (settings) appState.settings = settings;
 
@@ -1560,4 +1734,143 @@ function renderLimitsSettingsTable() {
         `;
         tbody.appendChild(row);
     });
+}
+
+// ----------------------------------------------------
+// ระบบนำเข้าและส่งออกข้อมูลครุภัณฑ์เป็นไฟล์ CSV
+// ----------------------------------------------------
+function exportDurablesCSV() {
+    if (!appState.durables || appState.durables.length === 0) {
+        alert("ไม่มีข้อมูลครุภัณฑ์ที่จะส่งออก");
+        return;
+    }
+
+    let csvContent = "\uFEFF"; // UTF-8 BOM
+    csvContent += "รหัสครุภัณฑ์,ชื่อครุภัณฑ์/รายการ,หมวดหมู่รายจ่าย,จำนวน,หมายเหตุ\r\n";
+
+    appState.durables.forEach(d => {
+        const code = (d.code || "").replace(/"/g, '""');
+        const name = (d.name || "").replace(/"/g, '""');
+        const qty = d.qty || 0;
+        const remark = (d.remark || "").replace(/"/g, '""');
+        csvContent += `"${code}","${name}","${d.category}",${qty},"${remark}"\r\n`;
+    });
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `durable_assets_${new Date().toISOString().substring(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+async function importDurablesCSV(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async function(evt) {
+        const text = evt.target.result;
+        const lines = text.split(/\r?\n/);
+        
+        let importCount = 0;
+        let updateCount = 0;
+        
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
+
+            const cols = parseCSVLine(line);
+            if (cols.length < 2) continue;
+
+            const code = cols[0].trim();
+            const name = cols[1].trim();
+            const categoryStr = cols[2] ? cols[2].trim() : "";
+            const qty = cols[3] ? parseInt(cols[3].trim()) || 0 : 0;
+            const remark = cols[4] ? cols[4].trim() : "";
+
+            if (!code || !name) continue;
+
+            const category = findCategoryKey(categoryStr);
+
+            const existing = appState.durables.find(d => d.code === code);
+            if (existing) {
+                existing.name = name;
+                existing.category = category;
+                existing.qty = (existing.qty || 0) + qty;
+                if (remark) existing.remark = remark;
+                
+                // อัปเดต Firestore
+                await saveDurable(existing.id, {
+                    name: existing.name,
+                    category: existing.category,
+                    qty: existing.qty,
+                    remark: existing.remark
+                });
+                updateCount++;
+            } else {
+                const newDurable = {
+                    code,
+                    name,
+                    category,
+                    qty,
+                    remark,
+                    createdAt: getServerTimestamp()
+                };
+                
+                // เพิ่มเข้า Firestore
+                const firestoreId = await addDurable(newDurable);
+                newDurable.id = firestoreId;
+                appState.durables.push(newDurable);
+                importCount++;
+            }
+        }
+
+        renderDurableTable();
+        alert(`นำเข้าครุภัณฑ์เสร็จสิ้น! เพิ่มใหม่ ${importCount} รายการ, อัปเดตยอดเดิม ${updateCount} รายการ`);
+        
+        e.target.value = "";
+    };
+    
+    reader.readAsText(file, "UTF-8");
+}
+
+function findCategoryKey(str) {
+    if (!str) return "stationery";
+    const cleaned = str.trim().toLowerCase();
+    
+    if (BUDGET_RULES[cleaned]) {
+        return cleaned;
+    }
+    
+    for (const [key, rule] of Object.entries(BUDGET_RULES)) {
+        if (rule.name.toLowerCase().includes(cleaned) || 
+            rule.code.toLowerCase() === cleaned || 
+            rule.label.toLowerCase().includes(cleaned)) {
+            return key;
+        }
+    }
+    
+    return "stationery";
+}
+
+function parseCSVLine(line) {
+    const result = [];
+    let current = "";
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        if (char === '"') {
+            inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+            result.push(current);
+            current = "";
+        } else {
+            current += char;
+        }
+    }
+    result.push(current);
+    return result;
 }

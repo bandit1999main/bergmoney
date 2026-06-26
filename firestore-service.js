@@ -61,6 +61,28 @@ export async function fsDeleteInventoryItem(itemId) {
 }
 
 // =====================================================
+// Durables (ครุภัณฑ์)
+// =====================================================
+
+export async function addDurable(durable) {
+    const ref = await addDoc(collection(db, "durables"), durable);
+    return ref.id;
+}
+
+export async function getDurables() {
+    const snap = await getDocs(collection(db, "durables"));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+export async function saveDurable(id, durable) {
+    await setDoc(doc(db, "durables", id), durable, { merge: true });
+}
+
+export async function fsDeleteDurable(id) {
+    await deleteDoc(doc(db, "durables", id));
+}
+
+// =====================================================
 // User Management
 // =====================================================
 
@@ -119,6 +141,12 @@ export async function migrateLocalStorageToFirestore(localData) {
         for (const item of localData.inventory) {
             const { id, ...data } = item;
             await addInventoryItem(data);
+        }
+    }
+    if (localData.durables && localData.durables.length > 0) {
+        for (const item of localData.durables) {
+            const { id, ...data } = item;
+            await addDurable(data);
         }
     }
 }
