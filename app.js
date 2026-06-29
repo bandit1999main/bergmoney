@@ -947,7 +947,7 @@ function printDocument(docId) {
             จึงเรียนมาเพื่อโปรดพิจารณาอนุญาต หากเห็นชอบจักได้ดำเนินการตามที่ ปณท มอบอำนาจการซื้อและการจ้างไว้ให้ต่อไป จักขอบคุณยิ่ง
         </p>
 
-        <div class="sig-section" style="margin-top: 45px; display: flex; justify-content: flex-end;">
+        <div class="sig-section">
             <div class="sig-block" style="width: 45%; text-align: center; font-size: 11pt; line-height: 1.35;">
                 <p style="margin-bottom: 8px;">(ลงชื่อ)..............................................................</p>
                 <p style="font-weight: bold;">(${doc.requesterName})</p>
@@ -1067,7 +1067,7 @@ function printMonthlyReport() {
 
         <p style="font-size: 11pt; margin-top: 10px; margin-bottom: 16px;">จึงเรียนมาเพื่อโปรดทราบ</p>
 
-        <div class="sig-section" style="margin-top: 45px; display: flex; justify-content: flex-end;">
+        <div class="sig-section">
             <div class="sig-block" style="width: 45%; text-align: center; font-size: 11pt; line-height: 1.35;">
                 <p style="margin-top: 40px; font-weight: bold; margin-bottom: 2px;">(${appState.settings.officerName || "นายนิพล ทรัพย์หมื่นแสน"})</p>
                 <p>${officerPosition}</p>

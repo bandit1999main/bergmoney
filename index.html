@@ -420,7 +420,11 @@
                 margin: 0.5cm 0.5cm 0.5cm 0.5cm;
             }
             .print-container {
-                display: block !important;
+                display: flex !important;
+                flex-direction: column;
+                justify-content: space-between;
+                min-height: 27.7cm; /* Height safety margin for A4 page */
+                box-sizing: border-box;
                 padding: 0;
                 font-family: "Angsana New", "AngsanaUPC", "Sarabun", sans-serif;
                 font-size: 11pt;
@@ -469,9 +473,10 @@
                 text-align: left;
             }
             .sig-section {
-                margin-top: 45px;
+                margin-top: auto;
                 display: flex;
                 justify-content: flex-end;
+                padding-top: 30px; /* safety padding */
             }
             .sig-block {
                 width: 45%;
@@ -971,6 +976,6 @@
     <!-- Print Preview Container -->
     <div class="print-container" id="printSection"></div>
 
-    <script src="app.js?v=1.4.0"></script>
+    <script src="app.js?v=1.5.0"></script>
 </body>
 </html>
