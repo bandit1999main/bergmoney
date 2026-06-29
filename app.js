@@ -717,7 +717,12 @@ function addFormItemRow() {
                 <div class="suggest-box"></div>
             </td>
             <td>
-                <input type="text" class="item-durable-code" placeholder="เช่น 51090902-001" style="width: 100%;">
+                <input type="text" class="item-durable-code" placeholder="เช่น 51090902-001" style="width: 100%; margin-bottom: 4px;">
+                <select class="item-log-type" style="width: 100%; font-size: 0.8rem; padding: 2px;">
+                    <option value="main">⭐️ ตัวเครื่องหลัก (จัดซื้อ)</option>
+                    <option value="consumable" selected>📦 วัสดุสิ้นเปลือง/หมึก/อะไหล่</option>
+                    <option value="repair">🔧 จ้างซ่อมบำรุงรักษา</option>
+                </select>
             </td>
             <td><input type="date" class="item-last-date" style="width: 100%;"></td>
             <td><input type="number" class="item-last-qty" placeholder="จำนวน" style="width: 100%; text-align: center;"></td>
@@ -775,13 +780,15 @@ async function handleBskSubmit(e) {
     rows.forEach(row => {
         const name = row.querySelector(".item-name").value;
         const durableCode = row.querySelector(".item-durable-code").value.trim();
+        const logTypeSelect = row.querySelector(".item-log-type");
+        const logType = logTypeSelect ? logTypeSelect.value : "consumable";
         const lastDate = row.querySelector(".item-last-date").value;
         const lastQty = row.querySelector(".item-last-qty").value;
         const lastPrice = row.querySelector(".item-last-price").value;
         const qty = parseFloat(row.querySelector(".item-qty").value) || 1;
         const price = parseFloat(row.querySelector(".item-price").value) || 0;
 
-        items.push({ name, durableCode, lastDate, lastQty, lastPrice, qty, price });
+        items.push({ name, durableCode, logType, lastDate, lastQty, lastPrice, qty, price });
         total += qty * price;
     });
 
@@ -2006,12 +2013,23 @@ window.showDurableHistory = function(durableCode, durableName) {
                     const itemTotal = (item.qty || 0) * (item.price || 0);
                     totalExpense += itemTotal;
                     
+                    let typeBadge = "";
+                    const logType = item.logType || "";
+                    if (logType === "main") {
+                        typeBadge = `<span style="display:inline-block; padding:2px 6px; border-radius:4px; font-size:0.75rem; font-weight:600; color:#B45309; background-color:#FEF3C7; border: 1px solid #FCD34D;">⭐️ ตัวเครื่องหลัก</span>`;
+                    } else if (logType === "repair") {
+                        typeBadge = `<span style="display:inline-block; padding:2px 6px; border-radius:4px; font-size:0.75rem; font-weight:600; color:#1D4ED8; background-color:#DBEAFE; border: 1px solid #BFDBFE;">🔧 จ้างซ่อมบำรุง</span>`;
+                    } else {
+                        typeBadge = `<span style="display:inline-block; padding:2px 6px; border-radius:4px; font-size:0.75rem; font-weight:600; color:#047857; background-color:#D1FAE5; border: 1px solid #A7F3D0;">📦 วัสดุ/สิ้นเปลือง</span>`;
+                    }
+
                     logs.push({
                         date: doc.docDate,
                         bskNumber: doc.bskNumber || doc.memoNumber || "-",
                         name: item.name,
                         qty: item.qty,
-                        total: itemTotal
+                        total: itemTotal,
+                        typeBadge: typeBadge
                     });
                 }
             });
@@ -2042,7 +2060,12 @@ window.showDurableHistory = function(durableCode, durableName) {
                 <tr>
                     <td>${dateFormatted}</td>
                     <td>บสค. 60 เลขที่ ${log.bskNumber}</td>
-                    <td class="text-left">${log.name}</td>
+                    <td class="text-left">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            ${log.typeBadge}
+                            <span>${log.name}</span>
+                        </div>
+                    </td>
                     <td style="text-align:center;">${log.qty}</td>
                     <td style="text-align:right; font-weight:600;">${log.total.toLocaleString("th-TH", { minimumFractionDigits: 2 })}</td>
                 </tr>
