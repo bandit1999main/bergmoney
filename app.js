@@ -365,11 +365,8 @@ async function initApp() {
 
     // โหลด Durables จาก Firestore
     appState.durables = await getDurables();
-    if (!appState.durables || appState.durables.length === 0) {
-        appState.durables = [
-            { id: "CUR-001", code: "51090902-001", name: "กระดาษ A4 Double A 80g", category: "stationery", qty: 10, remark: "ใช้ประจำสำนักงาน" }
-        ];
-        await addDurable(appState.durables[0]);
+    if (!appState.durables) {
+        appState.durables = [];
     }
 
     // กำหนดวันที่เริ่มต้น
@@ -830,11 +827,11 @@ async function handleBskSubmit(e) {
                 durable.qty = (durable.qty || 0) + (parseInt(item.qty) || 0);
                 // อัปเดตขึ้น Firestore
                 await saveDurable(durable.id, durable);
-            } else if (item.name.trim()) {
-                // สร้างครุภัณฑ์รายการใหม่ขึ้นมาโดยอัตโนมัติ
+            } else if (item.name.trim() && item.durableCode.trim()) {
+                // สร้างครุภัณฑ์รายการใหม่ขึ้นมาโดยอัตโนมัติ เฉพาะกรณีที่ผู้ใช้ระบุรหัสครุภัณฑ์มาด้วย
                 const newDurable = {
                     id: "CUR-" + Date.now() + "-" + Math.floor(Math.random() * 1000),
-                    code: item.durableCode || "",
+                    code: item.durableCode.trim(),
                     name: item.name.trim(),
                     category: category || "stationery",
                     qty: parseInt(item.qty) || 0,
