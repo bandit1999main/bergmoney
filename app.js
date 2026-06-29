@@ -450,7 +450,10 @@ function setupEventHandlers() {
     bskForm.addEventListener("submit", handleBskSubmit);
 
     document.getElementById("addItemBtn").addEventListener("click", addFormItemRow);
-    document.getElementById("itemCategory").addEventListener("change", checkQuotaLimits);
+    document.getElementById("itemCategory").addEventListener("change", () => {
+        checkQuotaLimits();
+        toggleVehicleMileage();
+    });
     document.getElementById("formTableBody").addEventListener("input", handleTableInput);
 
     // Dialog จัดการครุภัณฑ์
@@ -662,6 +665,17 @@ function calculateFormTotal() {
     checkQuotaLimits();
 }
 
+function toggleVehicleMileage() {
+    const category = document.getElementById("itemCategory").value;
+    const mileageGroup = document.getElementById("vehicleMileageGroup");
+    if (!mileageGroup) return;
+    const isVehicle = ["car_repair_car", "car_repair_bike", "car_repair_boat", "car_repair_twowheel"].includes(category);
+    mileageGroup.style.display = isVehicle ? "grid" : "none";
+    if (!isVehicle) {
+        document.getElementById("vehicleMileage").value = "";
+    }
+}
+
 function checkQuotaLimits() {
     const category = document.getElementById("itemCategory").value;
     if (!category) return;
@@ -809,6 +823,8 @@ async function handleBskSubmit(e) {
     const requesterName = document.getElementById("requesterName").value;
     const requesterPosition = document.getElementById("requesterPosition").value;
 
+    const vehicleMileageVal = document.getElementById("vehicleMileage").value;
+
     const newDoc = {
         memoNumber,
         bskNumber,
@@ -823,6 +839,7 @@ async function handleBskSubmit(e) {
         requesterPosition,
         orderAuthority,
         necessityReason,
+        vehicleMileage: vehicleMileageVal || "",
         createdBy: currentUser ? currentUser.email : "",
         createdAt: getServerTimestamp()
     };
@@ -870,6 +887,9 @@ async function handleBskSubmit(e) {
         const necReasonIn = document.getElementById("necessityReason");
         if (orderAuthIn) orderAuthIn.value = "ตามคำสั่งที่ 4/2566";
         if (necReasonIn) necReasonIn.value = "เพื่อใช้ในงานปฏิบัติงาน";
+
+        document.getElementById("vehicleMileage").value = "";
+        document.getElementById("vehicleMileageGroup").style.display = "none";
 
         document.getElementById("formTableBody").innerHTML = `
             <tr>
@@ -1272,6 +1292,8 @@ window.editDocument = function(docId) {
     document.getElementById("necessityReason").value = doc.necessityReason || "";
     document.getElementById("requesterName").value = doc.requesterName || "";
     document.getElementById("requesterPosition").value = doc.requesterPosition || "";
+    document.getElementById("vehicleMileage").value = doc.vehicleMileage || "";
+    toggleVehicleMileage();
 
     const hasQuot = doc.hasQuotation === "true";
     document.getElementById("quotationYes").checked = hasQuot;
@@ -1512,6 +1534,7 @@ function printDocument(docId) {
         <div style="display: flex; gap: 30px; margin: 10px 0; font-weight: bold; font-size: 11pt;">
             <span>[ ${doc.hasQuotation === 'true' ? '✓' : '&nbsp;'} ] มีใบเสนอราคา</span>
             <span>[ ${doc.hasQuotation === 'false' ? '✓' : '&nbsp;'} ] ไม่มีใบเสนอราคา</span>
+            ${doc.vehicleMileage ? `<span style="margin-left: auto;">🚗 เลขไมล์: <u>&nbsp;${Number(doc.vehicleMileage).toLocaleString()}&nbsp;</u> กม.</span>` : ''}
         </div>
 
         <table class="item-table" style="font-size: 10.5pt; border-collapse: collapse; width: 100%; margin: 14px 0;">

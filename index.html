@@ -1045,6 +1045,14 @@
                             </div>
                         </div>
 
+                        <!-- Vehicle Mileage Field (shows only for car_repair categories) -->
+                        <div id="vehicleMileageGroup" class="form-grid" style="display: none; margin-top: 1rem;">
+                            <div class="form-group" style="max-width: 350px;">
+                                <label for="vehicleMileage">🚗 เลขไมล์ (กิโลเมตร)</label>
+                                <input type="number" id="vehicleMileage" placeholder="เช่น 125000" min="0" step="1" style="font-weight: 600;">
+                            </div>
+                        </div>
+
                         <div id="quotaWarning" class="warning-banner" style="display: none;">
                             <span class="material-symbols-outlined">warning</span>
                             <span id="warningMessage">ยอดเงินจัดซื้อสะสมหมวดนี้เกินวงเงินอนุมัติสูงสุดของหัวหน้า!</span>
@@ -1528,6 +1536,6 @@
     <div class="print-container" id="printSection"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script type="module" src="app.js?v=2.1.9"></script>
+    <script type="module" src="app.js?v=2.2.0"></script>
 </body>
 </html>
