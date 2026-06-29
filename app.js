@@ -826,7 +826,6 @@ async function handleBskSubmit(e) {
         createdAt: getServerTimestamp()
     };
 
-    try {
     const editingId = document.getElementById("editingBskId").value;
 
     try {
