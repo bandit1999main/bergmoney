@@ -34,7 +34,7 @@ export async function addDocument(docData) {
 export async function getDocuments() {
     const q = query(collection(db, "documents"), orderBy("docDate", "desc"));
     const snap = await getDocs(q);
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    return snap.docs.map(d => ({ ...d.data(), id: d.id }));
 }
 
 export async function fsDeleteDocument(docId) {
@@ -53,7 +53,7 @@ export async function addInventoryItem(item) {
 export async function getInventory() {
     const q = query(collection(db, "inventory"), orderBy("date", "desc"));
     const snap = await getDocs(q);
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    return snap.docs.map(d => ({ ...d.data(), id: d.id }));
 }
 
 export async function fsDeleteInventoryItem(itemId) {
@@ -71,7 +71,7 @@ export async function addDurable(durable) {
 
 export async function getDurables() {
     const snap = await getDocs(collection(db, "durables"));
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    return snap.docs.map(d => ({ ...d.data(), id: d.id }));
 }
 
 export async function saveDurable(id, durable) {
