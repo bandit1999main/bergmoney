@@ -2430,7 +2430,7 @@ window.printDashboardReport = function() {
                 <!-- Header -->
                 <div class="print-header" style="position: relative; display: flex; align-items: center; justify-content: center; height: 60px; border-bottom: 2px solid #000000; margin-bottom: 18px; padding-bottom: 6px;">
                     <img src="thailand-post-logo.png" alt="ไปรษณีย์ไทย" class="print-logo" style="height: 48px; object-fit: contain; position: absolute; left: 0; bottom: 6px;">
-                    <div style="font-weight: bold; font-size: 18pt; margin-bottom: 0;">รายงานสรุปงบประมาณและสถานะโควตาประจำเดือน</div>
+                    <div style="font-weight: bold; font-size: 14pt; margin-bottom: 0; padding-left: 90px; text-align: center; width: 100%;">รายงานสรุปงบประมาณและสถานะโควตาประจำเดือน</div>
                 </div>
 
                 <!-- Info Table -->
