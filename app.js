@@ -2410,12 +2410,12 @@ window.printDashboardReport = function() {
 
         tableRowsHtml += `
             <tr>
-                <td style="text-align: left; font-weight: bold; padding: 10px;">${rule.name}<br><span style="font-size: 8pt; color: #4A5568; font-weight: normal;">รหัสบัญชี: ${rule.code}</span></td>
-                <td style="text-align: center; padding: 10px;">${limitPerRequestText}</td>
-                <td style="text-align: center; padding: 10px;">${limitPerMonthText}</td>
-                <td style="text-align: right; padding: 10px;">${spentThisMonth.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿</td>
-                <td style="text-align: right; padding: 10px; font-weight: bold;">${remainingText}</td>
-                <td style="text-align: center; padding: 10px; font-weight: bold;">${statusText}</td>
+                <td class="text-left" style="font-weight: bold;">${rule.name}<br><span style="font-size: 8pt; color: #4A5568; font-weight: normal;">รหัสบัญชี: ${rule.code}</span></td>
+                <td>${limitPerRequestText}</td>
+                <td>${limitPerMonthText}</td>
+                <td style="text-align: right;">${spentThisMonth.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿</td>
+                <td style="text-align: right; font-weight: bold;">${remainingText}</td>
+                <td>${statusText}</td>
             </tr>
         `;
     });
@@ -2458,15 +2458,15 @@ window.printDashboardReport = function() {
                 <div style="font-weight: bold; font-size: 11pt; margin-bottom: 8px;">สถานะการใช้งานงบประมาณแยกตามหมวดหมู่รายจ่าย</div>
                 
                 <!-- Table -->
-                <table class="report-table" style="width: 100%; border-collapse: collapse; font-size: 9.5pt; text-align: center; border: 1px solid #CBD5E1;">
+                <table class="item-table" style="width: 100%; border-collapse: collapse; font-size: 9.5pt; text-align: center;">
                     <thead>
-                        <tr style="background-color: #F1F5F9; border-bottom: 2px solid #94A3B8;">
-                            <th style="border: 1px solid #CBD5E1; padding: 8px; text-align: left; font-weight: bold;">ประเภทจัดซื้อจัดจ้าง/วัสดุ</th>
-                            <th style="border: 1px solid #CBD5E1; padding: 8px; font-weight: bold;">วงเงินอนุมัติ/ครั้ง</th>
-                            <th style="border: 1px solid #CBD5E1; padding: 8px; font-weight: bold;">วงเงินอนุมัติ/เดือน</th>
-                            <th style="border: 1px solid #CBD5E1; padding: 8px; font-weight: bold;">ใช้จริงสะสม</th>
-                            <th style="border: 1px solid #CBD5E1; padding: 8px; font-weight: bold;">คงเหลือใช้งาน</th>
-                            <th style="border: 1px solid #CBD5E1; padding: 8px; font-weight: bold;">สถานะ</th>
+                        <tr style="background-color: #F1F5F9;">
+                            <th style="padding: 8px; text-align: left; font-weight: bold;">ประเภทจัดซื้อจัดจ้าง/วัสดุ</th>
+                            <th style="padding: 8px; font-weight: bold;">วงเงินอนุมัติ/ครั้ง</th>
+                            <th style="padding: 8px; font-weight: bold;">วงเงินอนุมัติ/เดือน</th>
+                            <th style="padding: 8px; font-weight: bold;">ใช้จริงสะสม</th>
+                            <th style="padding: 8px; font-weight: bold;">คงเหลือใช้งาน</th>
+                            <th style="padding: 8px; font-weight: bold;">สถานะ</th>
                         </tr>
                     </thead>
                     <tbody>

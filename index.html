@@ -415,7 +415,28 @@
         }
 
         @media print {
-            aside, header, .content, .btn {
+            body, html {
+                background: #FFFFFF !important;
+                width: 100% !important;
+                height: auto !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            .app-wrapper {
+                display: block !important;
+                width: 100% !important;
+                height: auto !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            .main-container {
+                display: block !important;
+                width: 100% !important;
+                height: auto !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            aside, header, .content, .btn, .sidebar-user-profile {
                 display: none !important;
             }
             @page {
@@ -1498,6 +1519,6 @@
     <!-- Print Preview Container -->
     <div class="print-container" id="printSection"></div>
 
-    <script type="module" src="app.js?v=2.1.1"></script>
+    <script type="module" src="app.js?v=2.1.2"></script>
 </body>
 </html>
