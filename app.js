@@ -38,7 +38,10 @@ const BUDGET_RULES = {
     machine: { name: "ซ่อมแซมบำรุงรักษาเครื่องจักรและอุปกรณ์", limitPerRequest: Infinity, limitPerMonth: 5000, code: "51070101", label: "ค่าซ่อมแซมบำรุงรักษาเครื่องจักร" },
     tool: { name: "ซ่อมแซมบำรุงรักษาเครื่องมือเครื่องใช้ทั่วไป", limitPerRequest: Infinity, limitPerMonth: 5000, code: "51070199", label: "ค่าซ่อมบำรุงเครื่องมือใช้สอย" },
     office_repair: { name: "ซ่อมแซมบำรุงรักษาเครื่องใช้สำนักงาน", limitPerRequest: Infinity, limitPerMonth: 5000, code: "51070104", label: "ซ่อมเครื่องใช้สำนักงาน" },
-    car_repair: { name: "ซ่อมแซมบำรุงรักษายานพาหนะ", limitPerRequest: { car: 15000, bike: 3000, boat: 5000, twowheel: 1000 }, limitPerMonth: Infinity, code: "51070601", label: "ค่าซ่อมบำรุงยานพาหนะ" },
+    car_repair_car: { name: "ซ่อมแซมบำรุงรักษาพาหนะ (รถยนต์)", limitPerRequest: 15000, limitPerMonth: Infinity, code: "51070601", label: "ค่าซ่อมบำรุงยานพาหนะ" },
+    car_repair_bike: { name: "ซ่อมแซมบำรุงรักษาพาหนะ (รถจักรยานยนต์)", limitPerRequest: 3000, limitPerMonth: Infinity, code: "51070601", label: "ค่าซ่อมบำรุงยานพาหนะ" },
+    car_repair_boat: { name: "ซ่อมแซมบำรุงรักษาพาหนะ (เรือยนต์)", limitPerRequest: 5000, limitPerMonth: Infinity, code: "51070601", label: "ค่าซ่อมบำรุงยานพาหนะ" },
+    car_repair_twowheel: { name: "ซ่อมแซมบำรุงรักษาพาหนะ (รถเข็น/สองล้อลาก)", limitPerRequest: 1000, limitPerMonth: Infinity, code: "51070601", label: "ค่าซ่อมบำรุงยานพาหนะ" },
     public_utility: { name: "ติดตั้ง/ซ่อมแซมบำรุงรักษาอุปกรณ์สาธารณูปโภค", limitPerRequest: Infinity, limitPerMonth: 5000, code: "51070501", label: "ซ่อมแซมสาธารณูปโภค" }
 };
 
