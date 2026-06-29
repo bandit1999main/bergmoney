@@ -1794,6 +1794,7 @@ function updateUIElements(selectedMonth) {
     statBudgetElement.style.color = remainingOfficeBudget < 2000 ? "#EF4444" : "#10B981";
 
     renderBudgetQuotaTable(currentMonthStr);
+    renderDashboardCharts(currentMonthStr);
 }
 
 function renderBudgetQuotaTable(currentMonthStr) {
@@ -2488,3 +2489,145 @@ window.printDashboardReport = function() {
 
     window.print();
 };
+
+function renderDashboardCharts(monthStr) {
+    const currentMonthDocs = appState.documents.filter(doc => doc.docDate && doc.docDate.startsWith(monthStr));
+    const officeBudget = appState.settings.monthlyBudget || 30000;
+    const totalSpent = currentMonthDocs.reduce((sum, doc) => sum + doc.total, 0);
+    const remainingBudget = Math.max(0, officeBudget - totalSpent);
+
+    const categoryTotals = {};
+    let hasSpentData = false;
+
+    Object.keys(BUDGET_RULES).forEach(key => {
+        const spent = currentMonthDocs
+            .filter(doc => doc.itemCategory === key)
+            .reduce((sum, doc) => sum + doc.total, 0);
+        if (spent > 0) {
+            categoryTotals[BUDGET_RULES[key].name] = spent;
+            hasSpentData = true;
+        }
+    });
+
+    const ctxDoughnut = document.getElementById("doughnutChart");
+    if (ctxDoughnut) {
+        if (window.myDoughnutChart) {
+            window.myDoughnutChart.destroy();
+        }
+
+        if (hasSpentData) {
+            const labels = Object.keys(categoryTotals);
+            const data = Object.values(categoryTotals);
+            const colors = [
+                "#E31837", "#3B82F6", "#10B981", "#F59E0B", "#8B5CF6",
+                "#EC4899", "#14B8A6", "#F97316", "#06B6D4", "#64748B",
+                "#84CC16", "#A855F7"
+            ];
+
+            window.myDoughnutChart = new Chart(ctxDoughnut, {
+                type: "doughnut",
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colors.slice(0, labels.length),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: "bottom",
+                            labels: {
+                                font: { family: "Prompt", size: 10 },
+                                boxWidth: 12
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const val = context.raw || 0;
+                                    return ` ${context.label}: ${val.toLocaleString()} ฿`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        } else {
+            window.myDoughnutChart = new Chart(ctxDoughnut, {
+                type: "doughnut",
+                data: {
+                    labels: ["ไม่มีข้อมูลการใช้จ่ายในเดือนนี้"],
+                    datasets: [{
+                        data: [1],
+                        backgroundColor: ["#E2E8F0"],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true, position: "bottom", labels: { font: { family: "Prompt", size: 10 } } },
+                        tooltip: { enabled: false }
+                    }
+                }
+            });
+        }
+    }
+
+    const ctxBar = document.getElementById("barChart");
+    if (ctxBar) {
+        if (window.myBarChart) {
+            window.myBarChart.destroy();
+        }
+
+        window.myBarChart = new Chart(ctxBar, {
+            type: "bar",
+            data: {
+                labels: ["ยอดใช้จ่ายสะสม", "งบประมาณคงเหลือ"],
+                datasets: [{
+                    label: "จำนวนเงิน (บาท)",
+                    data: [totalSpent, remainingBudget],
+                    backgroundColor: ["#E31837", "#10B981"],
+                    borderRadius: 6,
+                    borderWidth: 0,
+                    barThickness: 35
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const val = context.raw || 0;
+                                return ` ${val.toLocaleString()} ฿`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            font: { family: "Prompt", size: 9 },
+                            callback: function(value) { return value.toLocaleString() + " ฿"; }
+                        },
+                        grid: { color: "#F1F5F9" }
+                    },
+                    x: {
+                        ticks: { font: { family: "Prompt", size: 10, weight: "bold" } },
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+    }
+}
