@@ -818,22 +818,34 @@ async function handleBskSubmit(e) {
         appState.documents.unshift(newDoc);
 
         // อัปเดตยอดคงเหลือครุภัณฑ์โดยอัตโนมัติ
-        if (appState.durables && appState.durables.length > 0) {
-            for (const item of items) {
-                let durable = null;
-                if (item.durableCode) {
-                    durable = appState.durables.find(d => d.code === item.durableCode);
-                } else if (item.name) {
-                    durable = appState.durables.find(d => d.name.trim().toLowerCase() === item.name.trim().toLowerCase());
-                }
-                if (durable) {
-                    durable.qty = (durable.qty || 0) + (parseInt(item.qty) || 0);
-                    // อัปเดตขึ้น Firestore
-                    await saveDurable(durable.id, durable);
-                }
+        if (!appState.durables) appState.durables = [];
+        for (const item of items) {
+            let durable = null;
+            if (item.durableCode) {
+                durable = appState.durables.find(d => d.code === item.durableCode);
+            } else if (item.name) {
+                durable = appState.durables.find(d => d.name.trim().toLowerCase() === item.name.trim().toLowerCase());
             }
-            renderDurableTable();
+            if (durable) {
+                durable.qty = (durable.qty || 0) + (parseInt(item.qty) || 0);
+                // อัปเดตขึ้น Firestore
+                await saveDurable(durable.id, durable);
+            } else if (item.name.trim()) {
+                // สร้างครุภัณฑ์รายการใหม่ขึ้นมาโดยอัตโนมัติ
+                const newDurable = {
+                    id: "CUR-" + Date.now() + "-" + Math.floor(Math.random() * 1000),
+                    code: item.durableCode || "",
+                    name: item.name.trim(),
+                    category: category || "stationery",
+                    qty: parseInt(item.qty) || 0,
+                    remark: "สร้างอัตโนมัติจากการบันทึก บสค.60"
+                };
+                appState.durables.push(newDurable);
+                // อัปเดตขึ้น Firestore
+                await saveDurable(newDurable.id, newDurable);
+            }
         }
+        renderDurableTable();
 
         alert("บันทึกข้อมูลคำขอจัดซื้อจัดจ้าง บสค. 60 เรียบร้อย!");
 
