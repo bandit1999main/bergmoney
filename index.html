@@ -896,17 +896,23 @@
             
             <!-- Tab: Dashboard -->
             <div class="tab-pane active" id="dashboard">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+                    <h2 style="font-size: 1.35rem; font-weight: 700; margin: 0; color: var(--text-primary);">ข้อมูลและสถานะงบประมาณรายเดือน</h2>
+                    <select id="dashboardMonthFilter" class="form-control" style="width: auto; padding: 6px 12px; font-size: 0.9rem; font-weight: 600; border-radius: var(--radius-sm); border: 1px solid var(--border-color); cursor: pointer; min-width: 160px;">
+                        <!-- JS Dynamic -->
+                    </select>
+                </div>
                 <div class="stats-row">
                     <div class="stat-card">
                         <div>
-                            <h3>จำนวนคำขอเดือนนี้</h3>
+                            <h3>จำนวนคำขอประจำเดือน</h3>
                             <p id="statCount">0 รายการ</p>
                         </div>
                         <div class="icon"><span class="material-symbols-outlined">assignment</span></div>
                     </div>
                     <div class="stat-card">
                         <div>
-                            <h3>ยอดขออนุมัติสะสม</h3>
+                            <h3>ยอดขออนุมัติสะสมประจำเดือน</h3>
                             <p id="statTotal">0.00 ฿</p>
                         </div>
                         <div class="icon"><span class="material-symbols-outlined">payments</span></div>
@@ -931,7 +937,7 @@
                                     <th>ประเภทจัดซื้อจัดจ้าง/วัสดุ</th>
                                     <th>วงเงินอนุมัติสูงสุด/ครั้ง</th>
                                     <th>วงเงินอนุมัติรวม/เดือน</th>
-                                    <th>ใช้ไปแล้วในเดือนนี้</th>
+                                    <th>ใช้ไปแล้วประจำเดือน</th>
                                     <th>คงเหลือใช้งาน</th>
                                     <th>สถานะ</th>
                                 </tr>

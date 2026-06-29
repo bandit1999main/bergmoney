@@ -435,6 +435,14 @@ function setupEventHandlers() {
         const isDark = body.classList.contains("dark-theme");
         document.getElementById("themeToggleBtn").querySelector("span").innerText = isDark ? "light_mode" : "dark_mode";
     });
+ 
+    // เหตุการณ์เปลี่ยนเดือนแดชบอร์ด
+    const dashFilter = document.getElementById("dashboardMonthFilter");
+    if (dashFilter) {
+        dashFilter.addEventListener("change", (e) => {
+            updateUIElements(e.target.value);
+        });
+    }
 
     // เหตุการณ์แบบฟอร์มคำขออนุมัติ
     const bskForm = document.getElementById("bskForm");
@@ -514,6 +522,7 @@ function switchTab(tabId) {
     document.getElementById("pageTitleText").innerText = titles[tabId] || "ระบบเบิกเงิน";
 
     if (tabId === "dashboard") {
+        initDashboardMonthFilter();
         updateUIElements();
     } else if (tabId === "history") {
         renderHistoryTable();
@@ -1496,8 +1505,50 @@ async function handleSettingsSubmit(e) {
     switchTab("dashboard");
 }
 
-function updateUIElements() {
-    const currentMonthStr = new Date().toISOString().substring(0, 7);
+function initDashboardMonthFilter() {
+    const select = document.getElementById("dashboardMonthFilter");
+    if (!select) return;
+    
+    const prevVal = select.value;
+    select.innerHTML = "";
+
+    const months = new Set();
+    const currentMonth = new Date().toISOString().substring(0, 7);
+    months.add(currentMonth);
+
+    appState.documents.forEach(doc => {
+        if (doc.docDate && doc.docDate.length >= 7) {
+            months.add(doc.docDate.substring(0, 7));
+        }
+    });
+
+    const sortedMonths = Array.from(months).sort((a, b) => b.localeCompare(a));
+
+    sortedMonths.forEach(m => {
+        const [year, month] = m.split("-");
+        const dateObj = new Date(parseInt(year), parseInt(month) - 1, 1);
+        const formatLabel = dateObj.toLocaleDateString("th-TH", { month: "long", year: "numeric" });
+        const opt = document.createElement("option");
+        opt.value = m;
+        opt.textContent = formatLabel;
+        select.appendChild(opt);
+    });
+
+    if (prevVal && sortedMonths.includes(prevVal)) {
+        select.value = prevVal;
+    } else {
+        select.value = currentMonth;
+    }
+}
+
+function updateUIElements(selectedMonth) {
+    const filter = document.getElementById("dashboardMonthFilter");
+    const currentMonthStr = selectedMonth || (filter ? filter.value : null) || new Date().toISOString().substring(0, 7);
+    
+    if (filter && filter.value !== currentMonthStr && Array.from(filter.options).some(o => o.value === currentMonthStr)) {
+        filter.value = currentMonthStr;
+    }
+
     const currentMonthDocs = appState.documents.filter(doc => doc.docDate && doc.docDate.startsWith(currentMonthStr));
     const totalSpentThisMonth = currentMonthDocs.reduce((sum, doc) => sum + doc.total, 0);
 
