@@ -526,7 +526,8 @@ function switchTab(tabId) {
         initDashboardMonthFilter();
         updateUIElements();
     } else if (tabId === "history") {
-        renderHistoryTable();
+        initHistoryFilters();
+        filterHistoryData();
     } else if (tabId === "inventory") {
         renderDurableTable();
     } else if (tabId === "monthly-report") {
@@ -1061,16 +1062,27 @@ window.deleteDurable = async function(id) {
 // ----------------------------------------------------
 // ประวัติเอกสาร (Firestore)
 // ----------------------------------------------------
-function renderHistoryTable() {
+function renderHistoryTable(filteredDocs) {
     const tbody = document.getElementById("historyTableBody");
     tbody.innerHTML = "";
 
-    if (appState.documents.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-secondary);">ไม่มีประวัติเอกสารจัดทำอนุมัติ</td></tr>`;
+    const docsToRender = filteredDocs !== undefined ? filteredDocs : appState.documents;
+
+    if (docsToRender.length === 0) {
+        if (filteredDocs !== undefined) {
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:1.5rem; color:var(--text-secondary);">
+                ไม่พบข้อมูลตามเงื่อนไขการสืบค้นของคุณ 
+                <button class="btn btn-secondary" onclick="window.clearHistoryFilters()" style="padding:4px 10px; font-size:0.8rem; margin-left:8px; display:inline-flex; align-items:center; gap:4px; border:1px solid var(--border-color);">
+                    <span class="material-symbols-outlined" style="font-size:16px;">filter_alt_off</span> ล้างตัวกรองทั้งหมด
+                </button>
+            </td></tr>`;
+        } else {
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-secondary);">ไม่มีประวัติเอกสารจัดทำอนุมัติ</td></tr>`;
+        }
         return;
     }
 
-    appState.documents.forEach(doc => {
+    docsToRender.forEach(doc => {
         const cat = BUDGET_RULES[doc.itemCategory];
         const dateFormatted = new Date(doc.docDate).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" });
         const quotationBadge = doc.hasQuotation === "true"
@@ -1131,6 +1143,99 @@ function renderHistoryTable() {
         `;
         tbody.insertAdjacentHTML("beforeend", row);
     });
+}
+
+function initHistoryFilters() {
+    const monthSelect = document.getElementById("histMonth");
+    if (!monthSelect) return;
+    
+    const prevVal = monthSelect.value;
+    monthSelect.innerHTML = '<option value="">ทั้งหมด</option>';
+    
+    const months = new Set();
+    appState.documents.forEach(doc => {
+        if (doc.docDate && doc.docDate.length >= 7) {
+            months.add(doc.docDate.substring(0, 7));
+        }
+    });
+    
+    const sortedMonths = Array.from(months).sort((a, b) => b.localeCompare(a));
+    sortedMonths.forEach(m => {
+        const [year, month] = m.split("-");
+        const dateObj = new Date(parseInt(year), parseInt(month) - 1, 1);
+        const label = dateObj.toLocaleDateString("th-TH", { month: "long", year: "numeric" });
+        const opt = document.createElement("option");
+        opt.value = m;
+        opt.textContent = label;
+        monthSelect.appendChild(opt);
+    });
+    
+    if (prevVal && sortedMonths.includes(prevVal)) {
+        monthSelect.value = prevVal;
+    }
+
+    if (!window._historyFiltersBound) {
+        window._historyFiltersBound = true;
+        const inputs = ["histSearch", "histMonth", "histCategory", "histStatus"];
+        inputs.forEach(id => {
+            const elem = document.getElementById(id);
+            if (elem) {
+                elem.addEventListener("input", filterHistoryData);
+                elem.addEventListener("change", filterHistoryData);
+            }
+        });
+    }
+}
+
+window.clearHistoryFilters = function() {
+    const search = document.getElementById("histSearch");
+    const month = document.getElementById("histMonth");
+    const cat = document.getElementById("histCategory");
+    const status = document.getElementById("histStatus");
+    if (search) search.value = "";
+    if (month) month.value = "";
+    if (cat) cat.value = "";
+    if (status) status.value = "";
+    filterHistoryData();
+};
+
+function filterHistoryData() {
+    const searchInput = document.getElementById("histSearch");
+    const monthInput = document.getElementById("histMonth");
+    const catInput = document.getElementById("histCategory");
+    const statusInput = document.getElementById("histStatus");
+
+    const searchVal = searchInput ? searchInput.value.trim().toLowerCase() : "";
+    const monthVal = monthInput ? monthInput.value : "";
+    const catVal = catInput ? catInput.value : "";
+    const statusVal = statusInput ? statusInput.value : "";
+
+    const filtered = appState.documents.filter(doc => {
+        if (searchVal) {
+            const bskMatch = (doc.bskNumber || "").toLowerCase().includes(searchVal);
+            const memoMatch = (doc.memoNumber || "").toLowerCase().includes(searchVal);
+            const reqMatch = (doc.requesterName || "").toLowerCase().includes(searchVal);
+            const itemsMatch = doc.items && doc.items.some(item => (item.name || "").toLowerCase().includes(searchVal));
+            if (!bskMatch && !memoMatch && !reqMatch && !itemsMatch) {
+                return false;
+            }
+        }
+        if (monthVal && (!doc.docDate || !doc.docDate.startsWith(monthVal))) {
+            return false;
+        }
+        if (catVal && doc.itemCategory !== catVal) {
+            return false;
+        }
+        if (statusVal) {
+            const docStatus = doc.status || "pending";
+            if (docStatus !== statusVal) {
+                return false;
+            }
+        }
+        return true;
+    });
+
+    renderHistoryTable(filtered);
 }
 
 window._deleteDocument = async function(docId) {

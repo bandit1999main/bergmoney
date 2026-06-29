@@ -1128,6 +1128,47 @@
                     <div class="panel-header">
                         <h2>ประวัติใบคำขอความเห็นชอบจัดซื้อจัดจ้าง บสค. 60</h2>
                     </div>
+                    <div id="historyFilterBar" style="padding: 1rem; background-color: var(--bg-card); border-bottom: 1px solid var(--border-color); display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label for="histSearch" style="font-size: 0.8rem; font-weight: 600; margin-bottom: 4px; display: block;">ค้นหาด่วน</label>
+                            <input type="text" id="histSearch" placeholder="พิมพ์ บสค. / ชื่อสิ่งของ / ผู้จัดทำ" style="width: 100%; padding: 6px 12px; font-size: 0.85rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-app); color: var(--text-primary);">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label for="histMonth" style="font-size: 0.8rem; font-weight: 600; margin-bottom: 4px; display: block;">เดือน/ปี</label>
+                            <select id="histMonth" style="width: 100%; padding: 6px 12px; font-size: 0.85rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-app); color: var(--text-primary); cursor: pointer;">
+                                <option value="">ทั้งหมด</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label for="histCategory" style="font-size: 0.8rem; font-weight: 600; margin-bottom: 4px; display: block;">หมวดหมู่รายจ่าย</label>
+                            <select id="histCategory" style="width: 100%; padding: 6px 12px; font-size: 0.85rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-app); color: var(--text-primary); cursor: pointer;">
+                                <option value="">ทั้งหมด</option>
+                                <option value="med">ซื้อยาเวชภัณฑ์และยาประจำตู้ยา</option>
+                                <option value="stationery">วัสดุสิ้นเปลือง - เครื่องใช้สำนักงาน</option>
+                                <option value="electricity">วัสดุสิ้นเปลือง - อุปกรณ์ไฟฟ้า/ประปา/สาธารณูปโภค</option>
+                                <option value="household">วัสดุสิ้นเปลือง - งานบ้านงานครัว</option>
+                                <option value="waste">กำจัดขยะและสิ่งปฏิกูล/ลอกท่อระบายน้ำ</option>
+                                <option value="building">ซ่อมแซมและบำรุงรักษาอาคารและสิ่งปลูกสร้าง</option>
+                                <option value="machine">ซ่อมแซมและบำรุงรักษาเครื่องจักรและอุปกรณ์</option>
+                                <option value="tool">ซ่อมแซมและบำรุงรักษาเครื่องมือเครื่องใช้ทั่วไป</option>
+                                <option value="office_repair">ซ่อมแซมและบำรุงรักษาเครื่องใช้สำนักงาน</option>
+                                <option value="car_repair_car">ซ่อมแซมบำรุงรักษาพาหนะ (รถยนต์)</option>
+                                <option value="car_repair_bike">ซ่อมแซมบำรุงรักษาพาหนะ (รถจักรยานยนต์)</option>
+                                <option value="car_repair_boat">ซ่อมแซมบำรุงรักษาพาหนะ (เรือยนต์)</option>
+                                <option value="car_repair_twowheel">ซ่อมแซมบำรุงรักษาพาหนะ (รถเข็น/สองล้อลาก)</option>
+                                <option value="public_utility">ติดตั้งและซ่อมแซมบำรุงรักษาอุปกรณ์สาธารณูปโภค</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label for="histStatus" style="font-size: 0.8rem; font-weight: 600; margin-bottom: 4px; display: block;">สถานะการอนุมัติ</label>
+                            <select id="histStatus" style="width: 100%; padding: 6px 12px; font-size: 0.85rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-app); color: var(--text-primary); cursor: pointer;">
+                                <option value="">ทั้งหมด</option>
+                                <option value="pending">🟡 รออนุมัติ</option>
+                                <option value="approved">🟢 อนุมัติแล้ว</option>
+                                <option value="rejected">🔴 ไม่อนุมัติ</option>
+                            </select>
+                        </div>
+                    </div>
                     <div class="table-responsive">
                         <table>
                             <thead>
@@ -1457,6 +1498,6 @@
     <!-- Print Preview Container -->
     <div class="print-container" id="printSection"></div>
 
-    <script type="module" src="app.js?v=2.1.0"></script>
+    <script type="module" src="app.js?v=2.1.1"></script>
 </body>
 </html>
