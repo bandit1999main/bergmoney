@@ -673,6 +673,8 @@ function toggleVehicleMileage() {
     mileageGroup.style.display = isVehicle ? "grid" : "none";
     if (!isVehicle) {
         document.getElementById("vehicleMileage").value = "";
+        document.getElementById("vehiclePlate").value = "";
+        document.getElementById("vehicleBrand").value = "";
     }
 }
 
@@ -824,6 +826,8 @@ async function handleBskSubmit(e) {
     const requesterPosition = document.getElementById("requesterPosition").value;
 
     const vehicleMileageVal = document.getElementById("vehicleMileage").value;
+    const vehiclePlateVal = document.getElementById("vehiclePlate").value;
+    const vehicleBrandVal = document.getElementById("vehicleBrand").value;
 
     const newDoc = {
         memoNumber,
@@ -840,6 +844,8 @@ async function handleBskSubmit(e) {
         orderAuthority,
         necessityReason,
         vehicleMileage: vehicleMileageVal || "",
+        vehiclePlate: vehiclePlateVal || "",
+        vehicleBrand: vehicleBrandVal || "",
         createdBy: currentUser ? currentUser.email : "",
         createdAt: getServerTimestamp()
     };
@@ -889,6 +895,8 @@ async function handleBskSubmit(e) {
         if (necReasonIn) necReasonIn.value = "เพื่อใช้ในงานปฏิบัติงาน";
 
         document.getElementById("vehicleMileage").value = "";
+        document.getElementById("vehiclePlate").value = "";
+        document.getElementById("vehicleBrand").value = "";
         document.getElementById("vehicleMileageGroup").style.display = "none";
 
         document.getElementById("formTableBody").innerHTML = `
@@ -1293,6 +1301,8 @@ window.editDocument = function(docId) {
     document.getElementById("requesterName").value = doc.requesterName || "";
     document.getElementById("requesterPosition").value = doc.requesterPosition || "";
     document.getElementById("vehicleMileage").value = doc.vehicleMileage || "";
+    document.getElementById("vehiclePlate").value = doc.vehiclePlate || "";
+    document.getElementById("vehicleBrand").value = doc.vehicleBrand || "";
     toggleVehicleMileage();
 
     const hasQuot = doc.hasQuotation === "true";
@@ -1534,7 +1544,11 @@ function printDocument(docId) {
         <div style="display: flex; gap: 30px; margin: 10px 0; font-weight: bold; font-size: 11pt;">
             <span>[ ${doc.hasQuotation === 'true' ? '✓' : '&nbsp;'} ] มีใบเสนอราคา</span>
             <span>[ ${doc.hasQuotation === 'false' ? '✓' : '&nbsp;'} ] ไม่มีใบเสนอราคา</span>
-            ${doc.vehicleMileage ? `<span style="margin-left: auto;">🚗 เลขไมล์: <u>&nbsp;${Number(doc.vehicleMileage).toLocaleString()}&nbsp;</u> กม.</span>` : ''}
+            ${doc.vehiclePlate || doc.vehicleMileage ? `</div>
+        <div style="display: flex; gap: 20px; margin: 8px 0; font-weight: bold; font-size: 11pt; border: 1px solid #CBD5E1; padding: 8px 14px; border-radius: 4px; background: #F8FAFC;">
+            ${doc.vehiclePlate ? '<span>🚗 ทะเบียนรถ: <u>&nbsp;' + doc.vehiclePlate + '&nbsp;</u></span>' : ''}
+            ${doc.vehicleBrand ? '<span>ยี่ห้อ/รุ่น: <u>&nbsp;' + doc.vehicleBrand + '&nbsp;</u></span>' : ''}
+            ${doc.vehicleMileage ? '<span>เลขไมล์: <u>&nbsp;' + Number(doc.vehicleMileage).toLocaleString() + '&nbsp;</u> กม.</span>' : ''}` : ''}
         </div>
 
         <table class="item-table" style="font-size: 10.5pt; border-collapse: collapse; width: 100%; margin: 14px 0;">
