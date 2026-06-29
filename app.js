@@ -879,7 +879,12 @@ async function handleBskSubmit(e) {
                     <div class="suggest-box"></div>
                 </td>
                 <td>
-                    <input type="text" class="item-durable-code" placeholder="เช่น 51090902-001" style="width: 100%;">
+                    <input type="text" class="item-durable-code" placeholder="เช่น 51090902-001" style="width: 100%; margin-bottom: 4px;">
+                    <select class="item-log-type" style="width: 100%; font-size: 0.8rem; padding: 2px;">
+                        <option value="main">⭐️ ตัวเครื่องหลัก (จัดซื้อ)</option>
+                        <option value="consumable" selected>📦 วัสดุสิ้นเปลือง/หมึก/อะไหล่</option>
+                        <option value="repair">🔧 จ้างซ่อมบำรุงรักษา</option>
+                    </select>
                 </td>
                 <td><input type="date" class="item-last-date" style="width: 100%;"></td>
                 <td><input type="number" class="item-last-qty" placeholder="จำนวน" style="width: 100%; text-align: center;"></td>
