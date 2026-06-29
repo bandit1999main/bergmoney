@@ -1579,7 +1579,6 @@ window.closeModal = function(modalId) {
 
 // Expose to global scope
 window._printDocument = printDocument;
-window._deleteDocument = deleteDocument;
 
 async function handleSettingsSubmit(e) {
     e.preventDefault();
