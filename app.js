@@ -463,8 +463,13 @@ function setupEventHandlers() {
             document.getElementById("durableForm").reset();
             document.getElementById("durableId").value = "";
             document.getElementById("durableModalTitle").innerText = "เพิ่มข้อมูลครุภัณฑ์";
+            toggleDurableVehicle();
             openModal("durableModal");
         });
+    }
+    const durableCategorySelect = document.getElementById("durableCategory");
+    if (durableCategorySelect) {
+        durableCategorySelect.addEventListener("change", toggleDurableVehicle);
     }
     const durableForm = document.getElementById("durableForm");
     if (durableForm) {
@@ -663,6 +668,19 @@ function calculateFormTotal() {
     document.getElementById("thaiBahtText").innerText = `(${arabicToThaiBaht(total)})`;
 
     checkQuotaLimits();
+}
+
+function toggleDurableVehicle() {
+    const category = document.getElementById("durableCategory").value;
+    const vehicleGroup = document.getElementById("durableVehicleGroup");
+    if (!vehicleGroup) return;
+    const isVehicle = ["car_repair_car", "car_repair_bike", "car_repair_boat", "car_repair_twowheel"].includes(category);
+    vehicleGroup.style.display = isVehicle ? "grid" : "none";
+    if (!isVehicle) {
+        document.getElementById("durableVehicleMileage").value = "";
+        document.getElementById("durableVehiclePlate").value = "";
+        document.getElementById("durableVehicleBrand").value = "";
+    }
 }
 
 function toggleVehicleMileage() {
@@ -981,7 +999,15 @@ function renderDurableTable() {
         const row = `
             <tr ${rowStyle}>
                 <td style="font-weight:600;">${d.code}</td>
-                <td>${d.name}</td>
+                <td>
+                    <div style="font-weight: 500;">${d.name}</div>
+                    ${d.vehiclePlate || d.vehicleBrand || d.vehicleMileage ? `
+                    <div style="font-size: 0.8rem; color: var(--thp-blue); margin-top: 4px; display: flex; gap: 8px; align-items: center; background: #f0f4f9; padding: 2px 6px; border-radius: 4px; width: fit-content;">
+                        <span>🚗 ${d.vehiclePlate || '-'}</span>
+                        ${d.vehicleBrand ? `<span>• ${d.vehicleBrand}</span>` : ''}
+                        ${d.vehicleMileage ? `<span>• ไมล์ล่าสุด: ${Number(d.vehicleMileage).toLocaleString()} กม.</span>` : ''}
+                    </div>` : ''}
+                </td>
                 <td>${catName}</td>
                 <td style="text-align:center;">${qtyDisplay}</td>
                 <td style="text-align:center; color: var(--text-secondary); font-weight: 500;">${minQtyVal}</td>
@@ -1017,6 +1043,10 @@ async function handleDurableSubmit(e) {
     const status = document.getElementById("durableStatus").value;
     const remark = document.getElementById("durableRemark").value.trim();
 
+    const vehiclePlate = document.getElementById("durableVehiclePlate").value.trim();
+    const vehicleBrand = document.getElementById("durableVehicleBrand").value.trim();
+    const vehicleMileage = document.getElementById("durableVehicleMileage").value.trim();
+
     const durableData = {
         code,
         name,
@@ -1025,6 +1055,9 @@ async function handleDurableSubmit(e) {
         minQty,
         status,
         remark,
+        vehiclePlate: vehiclePlate || "",
+        vehicleBrand: vehicleBrand || "",
+        vehicleMileage: vehicleMileage || "",
         updatedAt: getServerTimestamp()
     };
 
@@ -1041,6 +1074,9 @@ async function handleDurableSubmit(e) {
                 durable.minQty = minQty;
                 durable.status = status;
                 durable.remark = remark;
+                durable.vehiclePlate = vehiclePlate || "";
+                durable.vehicleBrand = vehicleBrand || "";
+                durable.vehicleMileage = vehicleMileage || "";
             }
             alert("แก้ไขข้อมูลครุภัณฑ์เรียบร้อย!");
         } else {
@@ -1073,6 +1109,10 @@ window.editDurable = function(id) {
     document.getElementById("durableMinQty").value = typeof d.minQty !== 'undefined' ? d.minQty : 3;
     document.getElementById("durableStatus").value = d.status || "active";
     document.getElementById("durableRemark").value = d.remark || "";
+    document.getElementById("durableVehiclePlate").value = d.vehiclePlate || "";
+    document.getElementById("durableVehicleBrand").value = d.vehicleBrand || "";
+    document.getElementById("durableVehicleMileage").value = d.vehicleMileage || "";
+    toggleDurableVehicle();
     
     document.getElementById("durableModalTitle").innerText = "แก้ไขข้อมูลครุภัณฑ์";
     openModal("durableModal");

@@ -1478,6 +1478,23 @@
                         <input type="number" id="durableMinQty" placeholder="เช่น 3" min="0" required>
                     </div>
                 </div>
+
+                <!-- Vehicle Info Fields for Asset (shows only for car_repair categories) -->
+                <div id="durableVehicleGroup" class="form-grid" style="display: none; margin-top: 1rem; grid-template-columns: repeat(3, 1fr);">
+                    <div class="form-group">
+                        <label for="durableVehiclePlate">🚗 เลขทะเบียนรถ</label>
+                        <input type="text" id="durableVehiclePlate" placeholder="เช่น กก-1234 ระยอง" style="font-weight: 600;">
+                    </div>
+                    <div class="form-group">
+                        <label for="durableVehicleBrand">ยี่ห้อ/รุ่น</label>
+                        <input type="text" id="durableVehicleBrand" placeholder="เช่น Honda Wave 110i" style="font-weight: 600;">
+                    </div>
+                    <div class="form-group">
+                        <label for="durableVehicleMileage">เลขไมล์ล่าสุด (กิโลเมตร)</label>
+                        <input type="number" id="durableVehicleMileage" placeholder="เช่น 125000" min="0" step="1" style="font-weight: 600;">
+                    </div>
+                </div>
+
                 <div class="form-grid">
                     <div class="form-group">
                         <label for="durableStatus">สถานะการใช้งาน</label>
@@ -1544,6 +1561,6 @@
     <div class="print-container" id="printSection"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script type="module" src="app.js?v=2.2.1"></script>
+    <script type="module" src="app.js?v=2.2.2"></script>
 </body>
 </html>
