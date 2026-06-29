@@ -896,13 +896,25 @@ async function handleBskSubmit(e) {
 // ----------------------------------------------------
 // ทะเบียนข้อมูลครุภัณฑ์ (Firestore)
 // ----------------------------------------------------
+const DURABLE_STATUS = {
+    active: { label: "ใช้งานปกติ", color: "#10B981", bgColor: "rgba(16, 185, 129, 0.12)" },
+    broken: { label: "ชำรุดรอซ่อม", color: "#F59E0B", bgColor: "rgba(245, 158, 11, 0.12)" },
+    repairing: { label: "อยู่ระหว่างซ่อม", color: "#3B82F6", bgColor: "rgba(59, 130, 246, 0.12)" },
+    scrapped: { label: "แทงจำหน่าย/ชำรุดถาวร", color: "#6B7280", bgColor: "rgba(107, 114, 128, 0.12)" }
+};
+
+function getStatusBadge(status) {
+    const s = DURABLE_STATUS[status || "active"] || DURABLE_STATUS.active;
+    return `<span style="display:inline-block; padding:3px 8px; border-radius:12px; font-size:0.75rem; font-weight:600; color:${s.color}; background-color:${s.bgColor}; text-align:center; min-width:80px;">${s.label}</span>`;
+}
+
 function renderDurableTable() {
     const tbody = document.getElementById("durableTableBody");
     if (!tbody) return;
     tbody.innerHTML = "";
 
     if (appState.durables.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-secondary);">ไม่มีข้อมูลทะเบียนครุภัณฑ์</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-secondary);">ไม่มีข้อมูลทะเบียนครุภัณฑ์</td></tr>`;
         return;
     }
 
@@ -911,6 +923,7 @@ function renderDurableTable() {
         const catName = cat ? cat.name : "-";
         const qtyVal = typeof d.qty !== 'undefined' ? parseInt(d.qty) : 0;
         const minQtyVal = typeof d.minQty !== 'undefined' ? parseInt(d.minQty) : 3;
+        const statusBadge = getStatusBadge(d.status);
 
         let qtyDisplay = `<span>${qtyVal}</span>`;
         let rowStyle = "";
@@ -930,13 +943,17 @@ function renderDurableTable() {
                 <td>${catName}</td>
                 <td style="text-align:center;">${qtyDisplay}</td>
                 <td style="text-align:center; color: var(--text-secondary); font-weight: 500;">${minQtyVal}</td>
+                <td style="text-align:center;">${statusBadge}</td>
                 <td>${d.remark || "-"}</td>
                 <td>
-                    <div style="display:flex; gap:0.5rem; justify-content:center;">
-                        <button class="btn btn-secondary" style="padding: 4px 10px; font-size:0.8rem;" onclick="editDurable('${d.id}')">
+                    <div style="display:flex; gap:0.35rem; justify-content:center;">
+                        <button class="btn btn-secondary" style="padding: 4px 8px; font-size:0.8rem; background-color: var(--thp-blue); color: white; border: none;" onclick="showDurableHistory('${d.code}', '${d.name}')" title="ดูประวัติการซ่อมและจัดซื้อ">
+                            <span class="material-symbols-outlined" style="font-size:16px;">history</span>
+                        </button>
+                        <button class="btn btn-secondary" style="padding: 4px 8px; font-size:0.8rem;" onclick="editDurable('${d.id}')" title="แก้ไข">
                             <span class="material-symbols-outlined" style="font-size:16px;">edit</span>
                         </button>
-                        <button class="btn btn-danger" style="padding: 4px 10px; font-size:0.8rem;" onclick="deleteDurable('${d.id}')">
+                        <button class="btn btn-danger" style="padding: 4px 8px; font-size:0.8rem;" onclick="deleteDurable('${d.id}')" title="ลบ">
                             <span class="material-symbols-outlined" style="font-size:16px;">delete</span>
                         </button>
                     </div>
@@ -955,6 +972,7 @@ async function handleDurableSubmit(e) {
     const category = document.getElementById("durableCategory").value;
     const qty = parseInt(document.getElementById("durableQty").value) || 0;
     const minQty = parseInt(document.getElementById("durableMinQty").value) || 0;
+    const status = document.getElementById("durableStatus").value;
     const remark = document.getElementById("durableRemark").value.trim();
 
     const durableData = {
@@ -963,6 +981,7 @@ async function handleDurableSubmit(e) {
         category,
         qty,
         minQty,
+        status,
         remark,
         updatedAt: getServerTimestamp()
     };
@@ -978,11 +997,13 @@ async function handleDurableSubmit(e) {
                 durable.category = category;
                 durable.qty = qty;
                 durable.minQty = minQty;
+                durable.status = status;
                 durable.remark = remark;
             }
             alert("แก้ไขข้อมูลครุภัณฑ์เรียบร้อย!");
         } else {
             // โหมดเพิ่มใหม่
+            durableData.status = "active";
             durableData.createdAt = getServerTimestamp();
             const firestoreId = await addDurable(durableData);
             durableData.id = firestoreId;
@@ -1008,6 +1029,7 @@ window.editDurable = function(id) {
     document.getElementById("durableCategory").value = d.category;
     document.getElementById("durableQty").value = typeof d.qty !== 'undefined' ? d.qty : 0;
     document.getElementById("durableMinQty").value = typeof d.minQty !== 'undefined' ? d.minQty : 3;
+    document.getElementById("durableStatus").value = d.status || "active";
     document.getElementById("durableRemark").value = d.remark || "";
     
     document.getElementById("durableModalTitle").innerText = "แก้ไขข้อมูลครุภัณฑ์";
@@ -1960,3 +1982,74 @@ function parseCSVLine(line) {
     result.push(current);
     return result;
 }
+
+window.showDurableHistory = function(durableCode, durableName) {
+    const summaryDiv = document.getElementById("durableHistorySummary");
+    const tbody = document.getElementById("durableHistoryTableBody");
+    if (!summaryDiv || !tbody) return;
+
+    summaryDiv.innerHTML = "";
+    tbody.innerHTML = "";
+
+    const d = appState.durables.find(item => item.code === durableCode);
+    const qtyVal = d ? (d.qty || 0) : 0;
+    const statusVal = d ? (d.status || "active") : "active";
+    const statusText = getStatusBadge(statusVal);
+
+    const logs = [];
+    let totalExpense = 0;
+
+    appState.documents.forEach(doc => {
+        if (doc.items) {
+            doc.items.forEach(item => {
+                if (item.durableCode && item.durableCode.trim() === durableCode.trim()) {
+                    const itemTotal = (item.qty || 0) * (item.price || 0);
+                    totalExpense += itemTotal;
+                    
+                    logs.push({
+                        date: doc.docDate,
+                        bskNumber: doc.bskNumber || doc.memoNumber || "-",
+                        name: item.name,
+                        qty: item.qty,
+                        total: itemTotal
+                    });
+                }
+            });
+        }
+    });
+
+    logs.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    summaryDiv.innerHTML = `
+        <div><strong>ครุภัณฑ์/รายการ:</strong> ${durableName}</div>
+        <div><strong>รหัสครุภัณฑ์:</strong> ${durableCode}</div>
+        <div><strong>จำนวนคงเหลือในคลัง:</strong> ${qtyVal} ชิ้น</div>
+        <div><strong>สถานะปัจจุบัน:</strong> ${statusText}</div>
+        <div style="grid-column: 1 / -1; margin-top: 4px; border-top: 1px solid var(--border-color); padding-top: 8px;">
+            <strong>ค่าใช้จ่ายสะสมทั้งหมดของครุภัณฑ์ชิ้นนี้:</strong> 
+            <span style="color: var(--thp-red); font-weight: 700; font-size: 1.1rem;">
+                ${totalExpense.toLocaleString("th-TH", { minimumFractionDigits: 2 })}
+            </span> บาท
+        </div>
+    `;
+
+    if (logs.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:1.5rem; color:var(--text-secondary);">ไม่มีประวัติการซื้อหรือการซ่อมแซมสำหรับครุภัณฑ์นี้</td></tr>`;
+    } else {
+        logs.forEach(log => {
+            const dateFormatted = new Date(log.date).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" });
+            const row = `
+                <tr>
+                    <td>${dateFormatted}</td>
+                    <td>บสค. 60 เลขที่ ${log.bskNumber}</td>
+                    <td class="text-left">${log.name}</td>
+                    <td style="text-align:center;">${log.qty}</td>
+                    <td style="text-align:right; font-weight:600;">${log.total.toLocaleString("th-TH", { minimumFractionDigits: 2 })}</td>
+                </tr>
+            `;
+            tbody.insertAdjacentHTML("beforeend", row);
+        });
+    }
+
+    openModal("durableHistoryModal");
+};
