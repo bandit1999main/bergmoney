@@ -841,7 +841,7 @@
                 <span class="material-symbols-outlined">edit_document</span> เขียน บสค. 60 ใหม่
             </div>
             <div class="menu-item" data-tab="history">
-                <span class="material-symbols-outlined">history</span> ประวัติขออนุมัติ
+                <span class="material-symbols-outlined">history</span> เช็คสถานะขออนุมัติ
             </div>
             <div class="menu-item" data-tab="inventory">
                 <span class="material-symbols-outlined">category</span> จัดการครุภัณฑ์
@@ -961,6 +961,7 @@
                     </div>
 
                     <form id="bskForm">
+                        <input type="hidden" id="editingBskId" value="">
                         <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
                             <div class="form-group">
                                 <label for="officeName">หน่วยงานผู้ขอ</label>
@@ -1137,6 +1138,7 @@
                                     <th>ใบเสนอราคา</th>
                                     <th>จำนวนเงินรวม</th>
                                     <th>หัวหน้าผู้ขออนุมัติ</th>
+                                    <th style="text-align: center;">สถานะอนุมัติ</th>
                                     <th style="text-align: center;">ดำเนินการ</th>
                                 </tr>
                             </thead>
@@ -1455,6 +1457,6 @@
     <!-- Print Preview Container -->
     <div class="print-container" id="printSection"></div>
 
-    <script type="module" src="app.js?v=2.0.7"></script>
+    <script type="module" src="app.js?v=2.0.8"></script>
 </body>
 </html>

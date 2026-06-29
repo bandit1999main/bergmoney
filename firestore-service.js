@@ -41,6 +41,10 @@ export async function fsDeleteDocument(docId) {
     await deleteDoc(doc(db, "documents", docId));
 }
 
+export async function updateDocument(docId, docData) {
+    await setDoc(doc(db, "documents", docId), docData, { merge: true });
+}
+
 // =====================================================
 // Inventory
 // =====================================================

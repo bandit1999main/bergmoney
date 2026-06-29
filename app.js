@@ -9,6 +9,7 @@ import {
     loadSettings as fsLoadSettings,
     addDocument as fsAddDocument,
     getDocuments as fsGetDocuments,
+    updateDocument as fsUpdateDocument,
     fsDeleteDocument,
     addDurable,
     getDurables,
@@ -512,7 +513,7 @@ function switchTab(tabId) {
     const titles = {
         "dashboard": "แดชบอร์ดสรุปงบประมาณและโควตาวงเงิน",
         "bsk60-form": "บันทึกข้อความขออนุมัติจัดซื้อจัดจ้าง บสค. 60",
-        "history": "ประวัติคำขอจัดซื้อจัดจ้าง บสค. 60",
+        "history": "เช็คสถานะการขออนุมัติ บสค. 60",
         "inventory": "จัดการทะเบียนข้อมูลครุภัณฑ์",
         "monthly-report": "สรุปรายการซื้อและการจ้างประจำเดือน (แบบที่ 3)",
         "settings": "ตั้งค่าข้อมูลที่ทำการไปรษณีย์และรหัสหน่วยงาน",
@@ -826,44 +827,33 @@ async function handleBskSubmit(e) {
     };
 
     try {
-        // บันทึกลง Firestore
-        const firestoreId = await fsAddDocument(newDoc);
-        newDoc.id = firestoreId;
+    const editingId = document.getElementById("editingBskId").value;
 
-        // อัปเดต state ในเครื่อง
-        appState.documents.unshift(newDoc);
-
-        // อัปเดตยอดคงเหลือครุภัณฑ์โดยอัตโนมัติ
-        if (!appState.durables) appState.durables = [];
-        for (const item of items) {
-            let durable = null;
-            if (item.durableCode) {
-                durable = appState.durables.find(d => d.code === item.durableCode);
-            } else if (item.name) {
-                durable = appState.durables.find(d => d.name.trim().toLowerCase() === item.name.trim().toLowerCase());
+    try {
+        if (editingId) {
+            // โหมดแก้ไข
+            const existingDoc = appState.documents.find(doc => doc.id === editingId);
+            newDoc.status = existingDoc ? (existingDoc.status || 'pending') : 'pending';
+            
+            await fsUpdateDocument(editingId, newDoc);
+            
+            newDoc.id = editingId;
+            const index = appState.documents.findIndex(doc => doc.id === editingId);
+            if (index !== -1) {
+                appState.documents[index] = newDoc;
             }
-            if (durable) {
-                durable.qty = (durable.qty || 0) + (parseInt(item.qty) || 0);
-                // อัปเดตขึ้น Firestore
-                await saveDurable(durable.id, durable);
-            } else if (item.name.trim() && item.durableCode.trim()) {
-                // สร้างครุภัณฑ์รายการใหม่ขึ้นมาโดยอัตโนมัติ เฉพาะกรณีที่ผู้ใช้ระบุรหัสครุภัณฑ์มาด้วย
-                const newDurable = {
-                    id: "CUR-" + Date.now() + "-" + Math.floor(Math.random() * 1000),
-                    code: item.durableCode.trim(),
-                    name: item.name.trim(),
-                    category: category || "stationery",
-                    qty: parseInt(item.qty) || 0,
-                    remark: "สร้างอัตโนมัติจากการบันทึก บสค.60"
-                };
-                appState.durables.push(newDurable);
-                // อัปเดตขึ้น Firestore
-                await saveDurable(newDurable.id, newDurable);
-            }
+            
+            alert("บันทึกการแก้ไข บสค. 60 เรียบร้อย!");
+            document.getElementById("editingBskId").value = "";
+            document.getElementById("saveDocBtn").innerHTML = `<span class="material-symbols-outlined">save</span> บันทึกคำขอ บสค.60`;
+        } else {
+            // โหมดสร้างใหม่
+            newDoc.status = 'pending';
+            const firestoreId = await fsAddDocument(newDoc);
+            newDoc.id = firestoreId;
+            appState.documents.unshift(newDoc);
+            alert("บันทึกข้อมูลคำขอจัดซื้อจัดจ้าง บสค. 60 รอการอนุมัติเรียบร้อย!");
         }
-        renderDurableTable();
-
-        alert("บันทึกข้อมูลคำขอจัดซื้อจัดจ้าง บสค. 60 เรียบร้อย!");
 
         // รีเซ็ตฟอร์ม
         document.getElementById("bskForm").reset();
@@ -1077,7 +1067,7 @@ function renderHistoryTable() {
     tbody.innerHTML = "";
 
     if (appState.documents.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-secondary);">ไม่มีประวัติเอกสารจัดทำอนุมัติ</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-secondary);">ไม่มีประวัติเอกสารจัดทำอนุมัติ</td></tr>`;
         return;
     }
 
@@ -1088,6 +1078,42 @@ function renderHistoryTable() {
             ? `<span style="background-color:rgba(16,185,129,0.15); color:#10B981; padding:3px 8px; border-radius:12px; font-size:0.75rem; font-weight:600;">มี</span>`
             : `<span style="background-color:rgba(239,68,68,0.15); color:#EF4444; padding:3px 8px; border-radius:12px; font-size:0.75rem; font-weight:600;">ไม่มี</span>`;
 
+        const status = doc.status || "pending";
+        let statusBadge = "";
+        let actionsHtml = "";
+
+        if (status === "approved") {
+            statusBadge = `<span style="background-color:rgba(16,185,129,0.15); color:#10B981; padding:4px 10px; border-radius:12px; font-size:0.75rem; font-weight:700; display:inline-block;">🟢 อนุมัติแล้ว</span>`;
+            actionsHtml = `
+                <button class="btn btn-secondary" style="padding: 4px 10px; font-size:0.8rem;" onclick="window._printDocument('${doc.id}')">
+                    <span class="material-symbols-outlined" style="font-size:16px;">print</span> พิมพ์
+                </button>
+                <button class="btn btn-danger" style="padding: 4px 10px; font-size:0.8rem;" onclick="window._deleteDocument('${doc.id}')">
+                    <span class="material-symbols-outlined" style="font-size:16px;">delete</span> ลบ
+                </button>
+            `;
+        } else if (status === "rejected") {
+            statusBadge = `<span style="background-color:rgba(239,68,68,0.15); color:#EF4444; padding:4px 10px; border-radius:12px; font-size:0.75rem; font-weight:700; display:inline-block;">🔴 ไม่อนุมัติ</span>`;
+            actionsHtml = `
+                <button class="btn btn-danger" style="padding: 4px 10px; font-size:0.8rem;" onclick="window._deleteDocument('${doc.id}')">
+                    <span class="material-symbols-outlined" style="font-size:16px;">delete</span> ลบ
+                </button>
+            `;
+        } else {
+            statusBadge = `<span style="background-color:rgba(245,158,11,0.15); color:#F59E0B; padding:4px 10px; border-radius:12px; font-size:0.75rem; font-weight:700; display:inline-block;">🟡 รออนุมัติ</span>`;
+            actionsHtml = `
+                <button class="btn btn-secondary" style="padding: 4px 8px; font-size:0.8rem; background-color:#10B981; color:white; border:none;" onclick="window.approveDocument('${doc.id}')" title="อนุมัติเอกสารเพื่อเข้าคลัง">
+                    <span class="material-symbols-outlined" style="font-size:16px;">check_circle</span> อนุมัติ
+                </button>
+                <button class="btn btn-secondary" style="padding: 4px 8px; font-size:0.8rem;" onclick="window.editDocument('${doc.id}')" title="แก้ไข">
+                    <span class="material-symbols-outlined" style="font-size:16px;">edit</span> แก้ไข
+                </button>
+                <button class="btn btn-danger" style="padding: 4px 8px; font-size:0.8rem;" onclick="window._deleteDocument('${doc.id}')" title="ปฏิเสธและลบทิ้ง">
+                    <span class="material-symbols-outlined" style="font-size:16px;">delete</span> ปฏิเสธ/ลบ
+                </button>
+            `;
+        }
+
         const row = `
             <tr>
                 <td style="font-weight:600;">บสค. 60 เลขที่ ${doc.bskNumber || doc.docNumber || "-"}</td>
@@ -1096,14 +1122,10 @@ function renderHistoryTable() {
                 <td>${quotationBadge}</td>
                 <td style="font-weight:700; color:var(--thp-red);">${doc.total.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿</td>
                 <td>${doc.requesterName}</td>
+                <td style="text-align:center;">${statusBadge}</td>
                 <td>
-                    <div style="display:flex; gap:0.5rem; justify-content:center;">
-                        <button class="btn btn-secondary" style="padding: 4px 10px; font-size:0.8rem;" onclick="window._printDocument('${doc.id}')">
-                            <span class="material-symbols-outlined" style="font-size:16px;">print</span> พิมพ์
-                        </button>
-                        <button class="btn btn-danger" style="padding: 4px 10px; font-size:0.8rem;" onclick="window._deleteDocument('${doc.id}')">
-                            <span class="material-symbols-outlined" style="font-size:16px;">delete</span> ลบ
-                        </button>
+                    <div style="display:flex; gap:0.35rem; justify-content:center;">
+                        ${actionsHtml}
                     </div>
                 </td>
             </tr>
@@ -1112,8 +1134,8 @@ function renderHistoryTable() {
     });
 }
 
-async function deleteDocument(docId) {
-    if (confirm("ลบประวัติใบขออนุมัตินี้ออกจากฐานข้อมูล?")) {
+window._deleteDocument = async function(docId) {
+    if (confirm("ลบประวัติใบขออนุมัตินี้ออกจากฐานข้อมูลหรือไม่?")) {
         try {
             await fsDeleteDocument(docId);
             appState.documents = appState.documents.filter(doc => doc.id !== docId);
@@ -1124,7 +1146,115 @@ async function deleteDocument(docId) {
             alert("เกิดข้อผิดพลาดในการลบ: " + error.message);
         }
     }
-}
+};
+
+window.editDocument = function(docId) {
+    const doc = appState.documents.find(d => d.id === docId);
+    if (!doc) return;
+
+    document.getElementById("editingBskId").value = doc.id;
+    document.getElementById("officeName").value = doc.officeName || "";
+    document.getElementById("officePhone").value = doc.officePhone || "";
+    document.getElementById("docDate").value = doc.docDate || "";
+    document.getElementById("memoNumber").value = doc.memoNumber || "";
+    document.getElementById("bskNumber").value = doc.bskNumber || "";
+    document.getElementById("itemCategory").value = doc.itemCategory || "";
+    document.getElementById("orderAuthority").value = doc.orderAuthority || "";
+    document.getElementById("necessityReason").value = doc.necessityReason || "";
+    document.getElementById("requesterName").value = doc.requesterName || "";
+    document.getElementById("requesterPosition").value = doc.requesterPosition || "";
+
+    const hasQuot = doc.hasQuotation === "true";
+    document.getElementById("quotationYes").checked = hasQuot;
+    document.getElementById("quotationNo").checked = !hasQuot;
+
+    const tbody = document.getElementById("formTableBody");
+    tbody.innerHTML = "";
+
+    doc.items.forEach((item, index) => {
+        const rowCount = index + 1;
+        const rowHtml = `
+            <tr>
+                <td style="text-align: center;">${rowCount}</td>
+                <td class="suggest-wrapper">
+                    <input type="text" class="item-name" value="${item.name || ""}" placeholder="ระบุรายละเอียดสิ่งของ (พิมพ์เพื่อค้นหาประวัติ)" required style="width: 100%;">
+                    <div class="suggest-box"></div>
+                </td>
+                <td>
+                    <input type="text" class="item-durable-code" value="${item.durableCode || ""}" placeholder="เช่น 51090902-001" style="width: 100%; margin-bottom: 4px;">
+                    <select class="item-log-type" style="width: 100%; font-size: 0.8rem; padding: 2px;">
+                        <option value="main" ${item.logType === 'main' ? 'selected' : ''}>⭐️ ตัวเครื่องหลัก (จัดซื้อ)</option>
+                        <option value="consumable" ${item.logType === 'consumable' || !item.logType ? 'selected' : ''}>📦 วัสดุสิ้นเปลือง/หมึก/อะไหล่</option>
+                        <option value="repair" ${item.logType === 'repair' ? 'selected' : ''}>🔧 จ้างซ่อมบำรุงรักษา</option>
+                    </select>
+                </td>
+                <td><input type="date" class="item-last-date" value="${item.lastDate || ""}" style="width: 100%;"></td>
+                <td><input type="number" class="item-last-qty" value="${item.lastQty || ""}" placeholder="จำนวน" style="width: 100%; text-align: center;"></td>
+                <td><input type="number" class="item-last-price" value="${item.lastPrice || ""}" placeholder="0.00" min="0" step="0.01" style="width: 100%; text-align: right;"></td>
+                <td><input type="number" class="item-qty" value="${item.qty || 1}" min="1" required style="width: 100%; text-align: center;"></td>
+                <td><input type="number" class="item-price" value="${item.price || 0}" placeholder="0.00" min="0" step="0.01" required style="width: 100%; text-align: right;"></td>
+                <td>
+                    <button type="button" class="btn-icon-only remove-row-btn" style="margin: auto;">
+                        <span class="material-symbols-outlined">delete</span>
+                    </button>
+                </td>
+            </tr>
+        `;
+        tbody.insertAdjacentHTML("beforeend", rowHtml);
+        
+        const rowElement = tbody.lastElementChild;
+        bindAutoSuggest(rowElement);
+    });
+
+    document.getElementById("saveDocBtn").innerHTML = `<span class="material-symbols-outlined">edit</span> บันทึกการแก้ไข บสค.60`;
+    switchTab("bsk60-form");
+};
+
+window.approveDocument = async function(docId) {
+    const doc = appState.documents.find(d => d.id === docId);
+    if (!doc) return;
+
+    if (confirm(`คุณอนุมัติคำขอจัดซื้อจัดจ้าง บสค. 60 เลขที่ ${doc.bskNumber || doc.memoNumber} ใช่หรือไม่?\nการอนุมัติจะเพิ่มจำนวนสินค้าเข้าสู่ทะเบียนครุภัณฑ์โดยอัตโนมัติ`)) {
+        try {
+            doc.status = 'approved';
+            await fsUpdateDocument(docId, { status: 'approved' });
+
+            if (!appState.durables) appState.durables = [];
+
+            for (const item of doc.items) {
+                if (!item.durableCode || !item.durableCode.trim()) continue;
+
+                let durable = appState.durables.find(d => d.code === item.durableCode.trim());
+
+                if (durable) {
+                    durable.qty = (parseInt(durable.qty) || 0) + (parseInt(item.qty) || 0);
+                    await saveDurable(durable.id, durable);
+                } else {
+                    const newDurable = {
+                        code: item.durableCode.trim(),
+                        name: item.name.trim(),
+                        category: doc.itemCategory || "stationery",
+                        qty: parseInt(item.qty) || 0,
+                        minQty: 3,
+                        status: "active",
+                        remark: "สร้างอัตโนมัติจากใบ บสค. 60 ที่ได้รับการอนุมัติ"
+                    };
+                    const firestoreId = await addDurable(newDurable);
+                    newDurable.id = firestoreId;
+                    appState.durables.push(newDurable);
+                }
+            }
+
+            renderDurableTable();
+            renderHistoryTable();
+            alert("อนุมัติรายการและบันทึกครุภัณฑ์เข้าระบบเรียบร้อย!");
+
+        } catch (error) {
+            console.error("Error approving document:", error);
+            alert("เกิดข้อผิดพลาดในการอนุมัติ: " + error.message);
+        }
+    }
+};
 
 // ----------------------------------------------------
 // รายงานประจำเดือน
