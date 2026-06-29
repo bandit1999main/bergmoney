@@ -2130,3 +2130,128 @@ window.showDurableHistory = function(durableCode, durableName) {
 
     openModal("durableHistoryModal");
 };
+
+window.printDashboardReport = function() {
+    const filter = document.getElementById("dashboardMonthFilter");
+    const selectedMonth = filter ? filter.value : new Date().toISOString().substring(0, 7);
+
+    const dateObj = new Date(selectedMonth + "-01");
+    const monthLabel = dateObj.toLocaleDateString("th-TH", { month: "long", year: "numeric" });
+    const printSection = document.getElementById("printSection");
+
+    const currentMonthDocs = appState.documents.filter(doc => doc.docDate && doc.docDate.startsWith(selectedMonth));
+    const totalSpentThisMonth = currentMonthDocs.reduce((sum, doc) => sum + doc.total, 0);
+    const officeBudget = appState.settings.monthlyBudget || 30000;
+    const remainingBudget = officeBudget - totalSpentThisMonth;
+
+    let tableRowsHtml = "";
+    const userGroup = appState.settings.group;
+
+    Object.keys(BUDGET_RULES).forEach(key => {
+        const rule = BUDGET_RULES[key];
+        const reqLimit = getLimitPerRequest(key);
+        let limitPerRequestText = "-";
+        if (reqLimit !== undefined && reqLimit !== Infinity) {
+            limitPerRequestText = `${reqLimit.toLocaleString()} ฿`;
+        }
+
+        const monthlyLimit = getLimitPerMonth(key, userGroup);
+        let limitPerMonthText = "-";
+        if (monthlyLimit !== undefined && monthlyLimit !== Infinity) {
+            limitPerMonthText = `${monthlyLimit.toLocaleString()} ฿`;
+        }
+
+        const spentThisMonth = currentMonthDocs
+            .filter(doc => doc.itemCategory === key)
+            .reduce((sum, doc) => sum + doc.total, 0);
+
+        const remaining = (monthlyLimit !== undefined && monthlyLimit !== Infinity) ? (monthlyLimit - spentThisMonth) : Infinity;
+        let remainingText = remaining === Infinity ? "ไม่จำกัด" : `${remaining.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿`;
+
+        let statusText = "พร้อมใช้งาน";
+        if (remaining <= 0 && remaining !== Infinity) {
+            statusText = "เต็มวงเงินแล้ว";
+        } else if (remaining < 1000 && remaining !== Infinity) {
+            statusText = "ใกล้เต็ม";
+        }
+
+        tableRowsHtml += `
+            <tr>
+                <td style="text-align: left; font-weight: bold; padding: 10px;">${rule.name}<br><span style="font-size: 8pt; color: #4A5568; font-weight: normal;">รหัสบัญชี: ${rule.code}</span></td>
+                <td style="text-align: center; padding: 10px;">${limitPerRequestText}</td>
+                <td style="text-align: center; padding: 10px;">${limitPerMonthText}</td>
+                <td style="text-align: right; padding: 10px;">${spentThisMonth.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿</td>
+                <td style="text-align: right; padding: 10px; font-weight: bold;">${remainingText}</td>
+                <td style="text-align: center; padding: 10px; font-weight: bold;">${statusText}</td>
+            </tr>
+        `;
+    });
+
+    const officeName = appState.settings.officeName || "ที่ทำการไปรษณีย์มาบตาพุด";
+    const officerName = appState.settings.officerName || "นายนิพล ทรัพย์หมื่นแสน";
+    const officerPosition = appState.settings.officerPosition || "หัวหน้าที่ทำการไปรษณีย์มาบตาพุด";
+
+    printSection.innerHTML = `
+        <div class="print-container" style="display: flex; flex-direction: column; justify-content: space-between; min-height: 27.7cm; box-sizing: border-box; padding: 0.5cm 1cm 1cm 1cm; font-family: 'Prompt', 'TH Sarabun New', sans-serif;">
+            <div>
+                <!-- Header -->
+                <div class="print-header" style="position: relative; display: flex; align-items: center; justify-content: center; height: 60px; border-bottom: 2px solid #000000; margin-bottom: 18px; padding-bottom: 6px;">
+                    <img src="thailand-post-logo.png" alt="ไปรษณีย์ไทย" class="print-logo" style="height: 48px; object-fit: contain; position: absolute; left: 0; bottom: 6px;">
+                    <div style="font-weight: bold; font-size: 18pt; margin-bottom: 0;">รายงานสรุปงบประมาณและสถานะโควตาประจำเดือน</div>
+                </div>
+
+                <!-- Info Table -->
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 11pt;">
+                    <tr>
+                        <td style="width: 12%; font-weight: bold; padding: 4px 0;">หน่วยงาน:</td>
+                        <td style="width: 48%; padding: 4px 0;">${officeName}</td>
+                        <td style="width: 15%; font-weight: bold; padding: 4px 0;">ประจำเดือน:</td>
+                        <td style="width: 25%; padding: 4px 0;">${monthLabel}</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: bold; padding: 4px 0;">งบที่ทำการ:</td>
+                        <td style="padding: 4px 0;">${officeBudget.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿</td>
+                        <td style="font-weight: bold; padding: 4px 0;">ใช้จริงสะสม:</td>
+                        <td style="padding: 4px 0; color: #E31837; font-weight: bold;">${totalSpentThisMonth.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: bold; padding: 4px 0;">งบคงเหลือ:</td>
+                        <td style="padding: 4px 0; font-weight: bold; color: #10B981;">${remainingBudget.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿</td>
+                        <td style="font-weight: bold; padding: 4px 0;">จำนวนคำขอ:</td>
+                        <td style="padding: 4px 0;">${currentMonthDocs.length} รายการ</td>
+                    </tr>
+                </table>
+
+                <div style="font-weight: bold; font-size: 11pt; margin-bottom: 8px;">สถานะการใช้งานงบประมาณแยกตามหมวดหมู่รายจ่าย</div>
+                
+                <!-- Table -->
+                <table class="report-table" style="width: 100%; border-collapse: collapse; font-size: 9.5pt; text-align: center; border: 1px solid #CBD5E1;">
+                    <thead>
+                        <tr style="background-color: #F1F5F9; border-bottom: 2px solid #94A3B8;">
+                            <th style="border: 1px solid #CBD5E1; padding: 8px; text-align: left; font-weight: bold;">ประเภทจัดซื้อจัดจ้าง/วัสดุ</th>
+                            <th style="border: 1px solid #CBD5E1; padding: 8px; font-weight: bold;">วงเงินอนุมัติ/ครั้ง</th>
+                            <th style="border: 1px solid #CBD5E1; padding: 8px; font-weight: bold;">วงเงินอนุมัติ/เดือน</th>
+                            <th style="border: 1px solid #CBD5E1; padding: 8px; font-weight: bold;">ใช้จริงสะสม</th>
+                            <th style="border: 1px solid #CBD5E1; padding: 8px; font-weight: bold;">คงเหลือใช้งาน</th>
+                            <th style="border: 1px solid #CBD5E1; padding: 8px; font-weight: bold;">สถานะ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${tableRowsHtml}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Signature Section -->
+            <div class="sig-section" style="margin-top: auto; display: flex; justify-content: flex-end; font-size: 11pt;">
+                <div style="text-align: center; width: 300px; padding-top: 1.5cm;">
+                    <p style="margin-bottom: 0.6cm;">ลงชื่อ............................................................</p>
+                    <p style="margin: 0; font-weight: bold;">( ${officerName} )</p>
+                    <p style="margin: 4px 0 0 0; color: #4A5568;">${officerPosition}</p>
+                </div>
+            </div>
+        </div>
+    `;
+
+    window.print();
+};

@@ -927,8 +927,11 @@
                 </div>
 
                 <div class="panel">
-                    <div class="panel-header">
+                    <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
                         <h2>โควตาวงเงินอนุมัติสะสมประจำเดือน (ตามคำสั่ง ปณท ที่ 4/2566)</h2>
+                        <button type="button" class="btn btn-secondary" onclick="printDashboardReport()" style="display: flex; align-items: center; gap: 4px; padding: 6px 12px; font-size: 0.85rem;">
+                            <span class="material-symbols-outlined" style="font-size: 16px;">print</span> พิมพ์รายงานประจำเดือน
+                        </button>
                     </div>
                     <div class="table-responsive">
                         <table>
@@ -1452,6 +1455,6 @@
     <!-- Print Preview Container -->
     <div class="print-container" id="printSection"></div>
 
-    <script type="module" src="app.js?v=2.0.6"></script>
+    <script type="module" src="app.js?v=2.0.7"></script>
 </body>
 </html>
