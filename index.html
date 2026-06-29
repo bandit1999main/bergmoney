@@ -483,9 +483,347 @@
                 text-align: center;
             }
         }
+
+        /* Auth Overlay */
+        .auth-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .auth-overlay.hidden {
+            display: none;
+        }
+
+        .auth-card {
+            background: #FFFFFF;
+            border-radius: 20px;
+            padding: 3rem 2.5rem;
+            width: 420px;
+            max-width: 92%;
+            text-align: center;
+            box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.4);
+            animation: fadeInUp 0.5s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .auth-card h2 {
+            font-size: 1.35rem;
+            color: #0F172A;
+            margin-bottom: 0.4rem;
+        }
+
+        .auth-card .auth-subtitle {
+            color: #64748B;
+            font-size: 0.9rem;
+            margin-bottom: 2rem;
+        }
+
+        .google-sign-in-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            padding: 0.85rem 2rem;
+            background: #FFFFFF;
+            border: 2px solid #E2E8F0;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            font-family: 'Prompt', sans-serif;
+            color: #1F2937;
+            transition: all 0.25s ease;
+            width: 100%;
+        }
+
+        .google-sign-in-btn:hover {
+            border-color: #4285F4;
+            box-shadow: 0 4px 15px rgba(66, 133, 244, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .google-sign-in-btn:active {
+            transform: translateY(0);
+        }
+
+        .google-sign-in-btn svg {
+            width: 22px;
+            height: 22px;
+            flex-shrink: 0;
+        }
+
+        .auth-error {
+            color: #EF4444;
+            font-size: 0.85rem;
+            margin-top: 1rem;
+            display: none;
+        }
+
+        .auth-loading {
+            display: none;
+            margin-top: 1.5rem;
+            color: #64748B;
+        }
+
+        .auth-loading .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #E2E8F0;
+            border-top-color: var(--thp-red);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            vertical-align: middle;
+            margin-right: 0.5rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Pending Screen */
+        .pending-icon {
+            font-size: 4rem;
+            color: #F59E0B;
+            margin-bottom: 1rem;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* User Management & Account */
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--border-color);
+        }
+
+        .user-avatar-lg {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid var(--border-color);
+        }
+
+        .role-badge {
+            display: inline-block;
+            padding: 3px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .role-badge.admin {
+            background-color: rgba(227, 24, 55, 0.1);
+            color: #E31837;
+        }
+
+        .role-badge.user {
+            background-color: rgba(59, 130, 246, 0.1);
+            color: #3B82F6;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 3px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .status-badge.approved {
+            background-color: rgba(16, 185, 129, 0.1);
+            color: #10B981;
+        }
+
+        .status-badge.pending {
+            background-color: rgba(245, 158, 11, 0.1);
+            color: #F59E0B;
+        }
+
+        .header-user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .header-user-info img {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .header-user-info span {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .sidebar-user-profile {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: var(--radius-sm);
+            margin-top: auto;
+        }
+
+        .sidebar-user-profile img {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .sidebar-user-profile .user-name {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #FFFFFF;
+        }
+
+        .sidebar-user-profile .user-role {
+            font-size: 0.7rem;
+            color: #94A3B8;
+        }
+
+        .account-profile-card {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            padding: 2rem;
+            background: linear-gradient(135deg, rgba(227, 24, 55, 0.03) 0%, rgba(30, 58, 138, 0.03) 100%);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+            margin-bottom: 2rem;
+        }
+
+        .account-info h3 {
+            font-size: 1.25rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .account-info p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Main app hidden by default until auth */
+        .app-wrapper {
+            display: none;
+            width: 100%;
+            height: 100vh;
+        }
+
+        .app-wrapper.visible {
+            display: flex;
+        }
+
+        .btn-success {
+            background-color: #10B981;
+            color: #FFFFFF;
+            border: none;
+        }
+
+        .btn-success:hover {
+            background-color: #059669;
+        }
     </style>
 </head>
 <body>
+
+    <!-- Auth Screen (Login) -->
+    <div class="auth-overlay" id="authScreen">
+        <div class="auth-card">
+            <div style="margin-bottom: 1.5rem;">
+                <img src="thailand-post-logo.png" alt="ไปรษณีย์ไทย" style="height: 56px; object-fit: contain;">
+            </div>
+            <h2>ระบบขออนุมัติจัดซื้อจัดจ้าง</h2>
+            <p class="auth-subtitle">บสค. 60 — ไปรษณีย์ไทย</p>
+            <button class="google-sign-in-btn" id="googleSignInBtn">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                ลงชื่อเข้าใช้ด้วย Google
+            </button>
+            <p class="auth-error" id="authError"></p>
+            <div class="auth-loading" id="authLoading">
+                <span class="spinner"></span> กำลังเข้าสู่ระบบ...
+            </div>
+        </div>
+    </div>
+
+    <!-- Pending Approval Screen -->
+    <div class="auth-overlay hidden" id="pendingScreen">
+        <div class="auth-card">
+            <span class="material-symbols-outlined pending-icon">hourglass_top</span>
+            <h2>รอการอนุมัติเข้าใช้งาน</h2>
+            <p id="pendingUserEmail" style="color: #64748B; margin-bottom: 0.5rem;"></p>
+            <p class="auth-subtitle">กรุณารอผู้ดูแลระบบ (Admin) อนุมัติบัญชีของท่านก่อนเข้าใช้งาน</p>
+            <button class="btn btn-secondary" id="pendingLogoutBtn" style="margin-top: 1rem;">
+                <span class="material-symbols-outlined">logout</span> ออกจากระบบ
+            </button>
+        </div>
+    </div>
+
+    <!-- Register Screen -->
+    <div class="auth-overlay hidden" id="registerScreen">
+        <div class="auth-card" style="max-width: 480px; width: 90%;">
+            <div style="margin-bottom: 1rem;">
+                <img src="thailand-post-logo.png" alt="ไปรษณีย์ไทย" style="height: 48px; object-fit: contain;">
+            </div>
+            <h2>ลงทะเบียนเข้าใช้งาน</h2>
+            <p class="auth-subtitle" style="margin-bottom: 1.5rem;">กรุณากรอกข้อมูลส่วนตัวเพื่อส่งขออนุมัติการใช้งานระบบ</p>
+            
+            <form id="registerForm" style="text-align: left; width: 100%;">
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="regOfficerName" style="font-weight: 600; display: block; margin-bottom: 0.35rem; font-size: 0.9rem;">ชื่อ-นามสกุล</label>
+                    <input type="text" id="regOfficerName" required style="width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 0.95rem;">
+                </div>
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="regOfficerPosition" style="font-weight: 600; display: block; margin-bottom: 0.35rem; font-size: 0.9rem;">ตำแหน่ง</label>
+                    <input type="text" id="regOfficerPosition" required placeholder="เช่น หน.ปณ.มาบตาพุด" style="width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 0.95rem;">
+                </div>
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="regOfficeName" style="font-weight: 600; display: block; margin-bottom: 0.35rem; font-size: 0.9rem;">หน่วยงาน/ที่ทำการ</label>
+                    <input type="text" id="regOfficeName" required placeholder="เช่น ที่ทำการไปรษณีย์มาบตาพุด" style="width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 0.95rem;">
+                </div>
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label for="regOfficePhone" style="font-weight: 600; display: block; margin-bottom: 0.35rem; font-size: 0.9rem;">เบอร์โทรศัพท์หน่วยงาน</label>
+                    <input type="text" id="regOfficePhone" required placeholder="เช่น 088-987-8635" style="width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 0.95rem;">
+                </div>
+                
+                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.75rem; font-size: 1rem; font-weight: 600; display: flex; justify-content: center; align-items: center; gap: 0.5rem;">
+                    <span class="material-symbols-outlined">send</span> ส่งขออนุมัติใช้งาน
+                </button>
+            </form>
+            
+            <button class="btn btn-secondary" id="regCancelBtn" style="margin-top: 1rem; width: 100%; display: flex; justify-content: center; align-items: center;">
+                ยกเลิก (ออกจากระบบ)
+            </button>
+        </div>
+    </div>
+
+    <!-- Main App Wrapper (hidden until authenticated) -->
+    <div class="app-wrapper" id="appWrapper">
 
     <!-- Sidebar Navigation -->
     <aside>
@@ -511,6 +849,20 @@
             <div class="menu-item" data-tab="settings">
                 <span class="material-symbols-outlined">settings</span> ตั้งค่าหน่วยงาน
             </div>
+            <div class="menu-item" data-tab="user-management" id="menuUserMgmt" style="display: none;">
+                <span class="material-symbols-outlined">admin_panel_settings</span> จัดการผู้ใช้งาน
+            </div>
+            <div class="menu-item" data-tab="account-settings">
+                <span class="material-symbols-outlined">account_circle</span> บัญชีผู้ใช้
+            </div>
+        </div>
+        <!-- Sidebar User Profile -->
+        <div class="sidebar-user-profile" id="sidebarUserProfile">
+            <img id="sidebarAvatar" src="" alt="">
+            <div>
+                <div class="user-name" id="sidebarUserName">—</div>
+                <div class="user-role" id="sidebarUserRole">—</div>
+            </div>
         </div>
     </aside>
 
@@ -518,7 +870,11 @@
     <div class="main-container">
         <header>
             <div class="page-title" id="pageTitleText">แดชบอร์ดสรุปงบประมาณ</div>
-            <div style="display: flex; gap: 0.5rem;">
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <div class="header-user-info" id="headerUserInfo">
+                    <img id="headerUserAvatar" src="" alt="">
+                    <span id="headerUserName"></span>
+                </div>
                 <button class="btn-icon-only" id="themeToggleBtn" title="สลับโหมด มืด/สว่าง">
                     <span class="material-symbols-outlined">dark_mode</span>
                 </button>
@@ -913,6 +1269,55 @@
                 </div>
             </div>
 
+            <!-- Tab: User Management (Admin Only) -->
+            <div class="tab-pane" id="user-management">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2>จัดการผู้ใช้งานระบบ</h2>
+                    </div>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 50px;"></th>
+                                    <th>ชื่อ-สกุล</th>
+                                    <th>อีเมล</th>
+                                    <th>สิทธิ์</th>
+                                    <th>สถานะ</th>
+                                    <th>เข้าใช้ล่าสุด</th>
+                                    <th style="text-align: center;">ดำเนินการ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="userManagementTableBody">
+                                <!-- JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Account Settings -->
+            <div class="tab-pane" id="account-settings">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2>บัญชีผู้ใช้งาน</h2>
+                    </div>
+                    <div class="account-profile-card">
+                        <img class="user-avatar-lg" id="accountAvatar" src="" alt="">
+                        <div class="account-info">
+                            <h3 id="accountName">—</h3>
+                            <p id="accountEmail">—</p>
+                            <span class="role-badge" id="accountRole">—</span>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 1rem;">
+                        <button class="btn btn-danger" id="logoutBtn">
+                            <span class="material-symbols-outlined">logout</span> ออกจากระบบ
+                        </button>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -973,9 +1378,11 @@
         </div>
     </div>
 
+    </div><!-- end .app-wrapper -->
+
     <!-- Print Preview Container -->
     <div class="print-container" id="printSection"></div>
 
-    <script src="app.js?v=1.5.0"></script>
+    <script type="module" src="app.js?v=2.0.1"></script>
 </body>
 </html>
