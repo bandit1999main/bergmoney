@@ -2288,6 +2288,8 @@ window.showDurableHistory = function(durableCode, durableName) {
     const tbody = document.getElementById("durableHistoryTableBody");
     if (!summaryDiv || !tbody) return;
 
+    window.activeDurableHistoryCode = durableCode;
+
     summaryDiv.innerHTML = "";
     tbody.innerHTML = "";
 
@@ -2636,3 +2638,125 @@ function renderDashboardCharts(monthStr) {
         });
     }
 }
+
+window.printDurableHistory = function() {
+    const code = window.activeDurableHistoryCode;
+    if (!code) return;
+
+    const d = appState.durables.find(item => item.code === code);
+    if (!d) return;
+
+    const logs = [];
+    let totalExpense = 0;
+
+    appState.documents.forEach(doc => {
+        if (doc.status !== "approved") return;
+        const matchingItems = doc.items.filter(item => item.durableCode === code);
+        matchingItems.forEach(item => {
+            let typeLabel = "วัสดุสิ้นเปลือง";
+            if (item.logType === "main") typeLabel = "ตัวเครื่องหลัก";
+            else if (item.logType === "repair") typeLabel = "จ้างซ่อมบำรุง";
+
+            const itemTotal = (item.qty || 1) * (item.price || 0);
+            totalExpense += itemTotal;
+
+            logs.push({
+                date: doc.docDate,
+                bskNumber: doc.bskNumber || doc.docNumber || "-",
+                name: item.name,
+                qty: item.qty,
+                total: itemTotal,
+                typeLabel: typeLabel
+            });
+        });
+    });
+
+    logs.sort((a, b) => b.date.localeCompare(a.date));
+
+    let tableRowsHtml = "";
+    logs.forEach((log, index) => {
+        const dateFormatted = new Date(log.date).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" });
+        tableRowsHtml += `
+            <tr>
+                <td>${index + 1}</td>
+                <td>${dateFormatted}</td>
+                <td>บสค. 60 เลขที่ ${log.bskNumber}</td>
+                <td class="text-left">[${log.typeLabel}] ${log.name}</td>
+                <td>${log.qty}</td>
+                <td style="text-align: right;">${log.total.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿</td>
+            </tr>
+        `;
+    });
+
+    if (logs.length === 0) {
+        tableRowsHtml = `<tr><td colspan="6" style="text-align:center; padding:15px;">ไม่มีประวัติการซื้อหรือการซ่อมแซมสำหรับครุภัณฑ์นี้</td></tr>`;
+    }
+
+    const officeName = appState.settings.officeName || "ที่ทำการไปรษณีย์มาบตาพุด";
+    const statusText = d.status === "broken" ? "ชำรุดรอซ่อม" : (d.status === "repairing" ? "อยู่ระหว่างซ่อม" : (d.status === "scrapped" ? "แทงจำหน่าย" : "ใช้งานปกติ"));
+
+    const printSection = document.getElementById("printSection");
+    printSection.innerHTML = `
+        <div class="print-container" style="display: flex; flex-direction: column; justify-content: space-between; min-height: 27.7cm; box-sizing: border-box; padding: 0.5cm 1cm 1cm 1cm; font-family: 'Prompt', 'TH Sarabun New', sans-serif;">
+            <div>
+                <!-- Header -->
+                <div class="print-header" style="position: relative; display: flex; align-items: center; justify-content: center; height: 60px; border-bottom: 2px solid #000000; margin-bottom: 18px; padding-bottom: 6px;">
+                    <img src="thailand-post-logo.png" alt="ไปรษณีย์ไทย" class="print-logo" style="height: 48px; object-fit: contain; position: absolute; left: 0; bottom: 6px;">
+                    <div style="font-weight: bold; font-size: 16pt; margin-bottom: 0; padding-left: 90px; text-align: center; width: 100%;">ประวัติการจัดซื้อและการบำรุงรักษาครุภัณฑ์</div>
+                </div>
+
+                <!-- Info Table -->
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 11pt;">
+                    <tr>
+                        <td style="width: 15%; font-weight: bold; padding: 4px 0;">ชื่อครุภัณฑ์:</td>
+                        <td style="width: 45%; padding: 4px 0;">${d.name}</td>
+                        <td style="width: 15%; font-weight: bold; padding: 4px 0;">รหัสครุภัณฑ์:</td>
+                        <td style="width: 25%; padding: 4px 0;">${d.code}</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: bold; padding: 4px 0;">จำนวนในคลัง:</td>
+                        <td style="padding: 4px 0;">${d.qty} ชิ้น</td>
+                        <td style="font-weight: bold; padding: 4px 0;">สถานะปัจจุบัน:</td>
+                        <td style="padding: 4px 0; font-weight: bold;">${statusText}</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: bold; padding: 4px 0;">หน่วยงาน:</td>
+                        <td style="padding: 4px 0;">${officeName}</td>
+                        <td style="font-weight: bold; padding: 4px 0;">ยอดจ่ายสะสมรวม:</td>
+                        <td style="padding: 4px 0; font-weight: bold; color: #E31837;">${totalExpense.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿</td>
+                    </tr>
+                </table>
+
+                <div style="font-weight: bold; font-size: 11pt; margin-bottom: 8px;">ตารางบันทึกกิจกรรมประวัติจัดซื้อและจ้างซ่อมบำรุงรักษา</div>
+                
+                <!-- Table -->
+                <table class="item-table" style="width: 100%; border-collapse: collapse; font-size: 10pt; text-align: center;">
+                    <thead>
+                        <tr style="background-color: #F1F5F9;">
+                            <th style="padding: 8px; font-weight: bold; width: 8%;">ลำดับ</th>
+                            <th style="padding: 8px; font-weight: bold; width: 12%;">ว.ด.ป.</th>
+                            <th style="padding: 8px; font-weight: bold; width: 22%;">เลขที่ บสค. 60</th>
+                            <th style="padding: 8px; font-weight: bold; text-align: left;">รายการ/กิจกรรมที่เกิดขึ้น</th>
+                            <th style="padding: 8px; font-weight: bold; width: 10%;">จำนวน</th>
+                            <th style="padding: 8px; font-weight: bold; width: 18%; text-align: right;">จำนวนเงิน</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${tableRowsHtml}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Footer signature -->
+            <div class="sig-section" style="margin-top: auto; display: flex; justify-content: flex-end; font-size: 11pt;">
+                <div style="text-align: center; width: 300px; padding-top: 1.5cm;">
+                    <p style="margin-bottom: 0.6cm;">ลงชื่อ............................................................ผู้จัดพิมพ์รายงาน</p>
+                    <p style="margin: 0; font-weight: bold;">( ${appState.settings.officerName || "..................................................."} )</p>
+                    <p style="margin: 4px 0 0 0; color: #4A5568;">${appState.settings.officerPosition || "เจ้าหน้าที่พัสดุ"}</p>
+                </div>
+            </div>
+        </div>
+    `;
+
+    window.print();
+};
