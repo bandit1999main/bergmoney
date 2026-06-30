@@ -1236,7 +1236,7 @@ function renderHistoryTable(filteredDocs) {
 
         const row = `
             <tr>
-                <td style="font-weight:600;">บสค. 60 เลขที่ ${doc.bskNumber || doc.docNumber || "-"}</td>
+                <td style="font-weight:600;">${doc.bskNumber || doc.docNumber || "-"}</td>
                 <td>${dateFormatted}</td>
                 <td>${cat ? cat.name : "ทั่วไป"}</td>
                 <td>${quotationBadge}</td>
@@ -2557,7 +2557,7 @@ window.showDurableHistory = function(durableCode, durableName) {
             const row = `
                 <tr>
                     <td>${dateFormatted}</td>
-                    <td>บสค. 60 เลขที่ ${log.bskNumber}</td>
+                    <td>${log.bskNumber}</td>
                     <td class="text-left">
                         <div style="display:flex; align-items:center; gap:8px;">
                             ${log.typeBadge}
@@ -2884,7 +2884,7 @@ window.printDurableHistory = function() {
             <tr>
                 <td>${index + 1}</td>
                 <td>${dateFormatted}</td>
-                <td>บสค. 60 เลขที่ ${log.bskNumber}</td>
+                <td>${log.bskNumber}</td>
                 <td class="text-left">[${log.typeLabel}] ${log.name}</td>
                 <td>${log.qty} ${log.unit}</td>
                 <td style="text-align: right;">${log.total.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿</td>
