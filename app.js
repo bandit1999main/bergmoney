@@ -2792,7 +2792,11 @@ window.printDashboardReport = function() {
         const reqLimit = getLimitPerRequest(key);
         let limitPerRequestText = "-";
         if (reqLimit !== undefined && reqLimit !== Infinity) {
-            limitPerRequestText = `${reqLimit.toLocaleString()} ฿`;
+            if (typeof reqLimit === "object") {
+                limitPerRequestText = `รถ: ${reqLimit.car.toLocaleString()}฿ / จยย.: ${reqLimit.bike.toLocaleString()}฿`;
+            } else {
+                limitPerRequestText = `${reqLimit.toLocaleString()} ฿`;
+            }
         }
 
         const monthlyLimit = getLimitPerMonth(key, userGroup);
@@ -2801,28 +2805,101 @@ window.printDashboardReport = function() {
             limitPerMonthText = `${monthlyLimit.toLocaleString()} ฿`;
         }
 
-        const spentThisMonth = currentMonthDocs
-            .filter(doc => doc.itemCategory === key)
-            .reduce((sum, doc) => sum + doc.total, 0);
+        const isVehicleCategory = ["car_repair_car", "car_repair_bike", "car_repair_boat", "car_repair_twowheel"].includes(key);
+        
+        let spentThisMonth = 0;
+        let remaining = Infinity;
+        let remainingText = "";
+        let spentText = "";
+        let statusText = "";
 
-        const remaining = (monthlyLimit !== undefined && monthlyLimit !== Infinity) ? (monthlyLimit - spentThisMonth) : Infinity;
-        let remainingText = remaining === Infinity ? "ไม่จำกัด" : `${remaining.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿`;
+        if (isVehicleCategory) {
+            const catToTypeMap = {
+                "car_repair_car": "car",
+                "car_repair_bike": "bike",
+                "car_repair_boat": "boat",
+                "car_repair_twowheel": "twowheel"
+            };
+            const targetType = catToTypeMap[key];
 
-        let statusText = "พร้อมใช้งาน";
-        if (remaining <= 0 && remaining !== Infinity) {
-            statusText = "เต็มวงเงินแล้ว";
-        } else if (remaining < 1000 && remaining !== Infinity) {
-            statusText = "ใกล้เต็ม";
+            // ดึงรายการซ่อมแซมยานพาหนะของเดือนนี้เฉพาะที่ตรงกับหมวดหมู่นี้และมีประเภทพาหนะที่ตรงกัน
+            const vehicleDocs = currentMonthDocs.filter(doc => 
+                doc.itemCategory === key &&
+                (doc.vehicleType || "car") === targetType
+            );
+
+            // จัดกลุ่มยอดจ่ายตามทะเบียนรถ
+            const spentByPlate = {};
+            vehicleDocs.forEach(doc => {
+                const plate = doc.vehiclePlate ? doc.vehiclePlate.trim() : "ไม่ระบุทะเบียน";
+                spentByPlate[plate] = (spentByPlate[plate] || 0) + doc.total;
+            });
+
+            // ตรวจหาทะเบียนรถที่มีอยู่ในระบบทะเบียนครุภัณฑ์ที่ตรงกับหมวดหมู่นี้
+            const activePlates = new Set(Object.keys(spentByPlate));
+            appState.durables.forEach(d => {
+                if (d.category === key && (d.vehicleType || "car") === targetType && d.vehiclePlate) {
+                    activePlates.add(d.vehiclePlate.trim());
+                }
+            });
+
+            let detailsList = [];
+            let lowestRemaining = Infinity;
+
+            activePlates.forEach(plate => {
+                if (!plate || plate === "ไม่ระบุทะเบียน") return;
+                
+                const emoji = targetType === "bike" ? "🏍️" : (targetType === "boat" ? "⚓️" : (targetType === "twowheel" ? "🛒" : "🚗"));
+                const spent = spentByPlate[plate] || 0;
+                const rem = (monthlyLimit !== undefined && monthlyLimit !== Infinity) ? (monthlyLimit - spent) : Infinity;
+                if (rem < lowestRemaining) {
+                    lowestRemaining = rem;
+                }
+                
+                if (spent > 0 || rem !== Infinity) {
+                    detailsList.push(`<div style="font-size: 7.5pt; color: #4A5568; margin-top: 1px; text-align: left; padding-left: 10px;">${emoji} ทะเบียน ${plate}: ใช้ไป ${spent.toLocaleString()}฿ (คงเหลือ ${rem === Infinity ? 'ไม่จำกัด' : rem.toLocaleString() + '฿'})</div>`);
+                }
+            });
+
+            spentThisMonth = vehicleDocs.reduce((sum, doc) => sum + doc.total, 0);
+            spentText = `${spentThisMonth.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿${detailsList.join("")}`;
+            
+            remaining = lowestRemaining;
+            remainingText = remaining === Infinity ? "ไม่จำกัด" : `ขั้นต่ำเหลือ ${remaining.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿`;
+            
+            if (remaining <= 0 && remaining !== Infinity) {
+                statusText = "มีรถเต็มวงเงิน";
+            } else if (remaining < 1000 && remaining !== Infinity) {
+                statusText = "ใกล้เต็มบางคัน";
+            } else {
+                statusText = "พร้อมใช้งาน";
+            }
+        } else {
+            spentThisMonth = currentMonthDocs
+                .filter(doc => doc.itemCategory === key)
+                .reduce((sum, doc) => sum + doc.total, 0);
+            spentText = `${spentThisMonth.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿`;
+            
+            remaining = (monthlyLimit !== undefined && monthlyLimit !== Infinity) ? (monthlyLimit - spentThisMonth) : Infinity;
+            remainingText = remaining === Infinity ? "ไม่จำกัด" : `${remaining.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿`;
+            
+            if (remaining <= 0 && remaining !== Infinity) {
+                statusText = "เต็มวงเงินแล้ว";
+            } else if (remaining < 1000 && remaining !== Infinity) {
+                statusText = "ใกล้เต็ม";
+            } else {
+                statusText = "พร้อมใช้งาน";
+            }
         }
 
         tableRowsHtml += `
             <tr>
-                <td class="text-left" style="font-weight: bold;">${rule.name}<br><span style="font-size: 8pt; color: #4A5568; font-weight: normal;">รหัสบัญชี: ${rule.code}</span></td>
-                <td>${limitPerRequestText}</td>
-                <td>${limitPerMonthText}</td>
-                <td style="text-align: right;">${spentThisMonth.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿</td>
-                <td style="text-align: right; font-weight: bold;">${remainingText}</td>
-                <td>${statusText}</td>
+                <td class="text-left" style="font-weight: bold; padding: 6px 8px;">${rule.name}<br><span style="font-size: 8pt; color: #4A5568; font-weight: normal;">รหัสบัญชี: ${rule.code}</span></td>
+                <td style="padding: 6px 8px;">${limitPerRequestText}</td>
+                <td style="padding: 6px 8px;">${limitPerMonthText}</td>
+                <td style="text-align: right; padding: 6px 8px; font-size: 8.5pt; line-height: 1.3;">${spentText}</td>
+                <td style="text-align: right; font-weight: bold; padding: 6px 8px; font-size: 8.5pt;">${remainingText}</td>
+                <td style="padding: 6px 8px;">${statusText}</td>
             </tr>
         `;
     });
