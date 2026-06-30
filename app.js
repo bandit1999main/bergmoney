@@ -603,7 +603,22 @@ function showSuggestions(input, boxElement) {
                 if (categorySelect) {
                     categorySelect.value = d.category;
                     checkQuotaLimits();
+                    toggleVehicleMileage();
                 }
+            }
+
+            // เติมข้อมูลยานพาหนะถ้าเป็นครุภัณฑ์ยานพาหนะและมีค่าบันทึกอยู่
+            if (d.vehiclePlate) {
+                const plateInput = document.getElementById("vehiclePlate");
+                if (plateInput) plateInput.value = d.vehiclePlate;
+            }
+            if (d.vehicleBrand) {
+                const brandInput = document.getElementById("vehicleBrand");
+                if (brandInput) brandInput.value = d.vehicleBrand;
+            }
+            if (d.vehicleMileage) {
+                const mileageInput = document.getElementById("vehicleMileage");
+                if (mileageInput) mileageInput.value = d.vehicleMileage;
             }
 
             // ค้นหาประวัติจัดซื้อจัดจ้างครั้งล่าสุดสำหรับครุภัณฑ์ตัวนี้
