@@ -2817,6 +2817,8 @@ window.printDashboardReport = function() {
             limitPerMonthText = `${monthlyLimit.toLocaleString()} ฿`;
         }
 
+        const isVehicleCategory = ["car_repair_car", "car_repair_bike", "car_repair_boat", "car_repair_twowheel"].includes(key);
+
         if (isVehicleCategory) {
             const catToTypeMap = {
                 "car_repair_car": "car",
