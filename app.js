@@ -2419,6 +2419,7 @@ window.showDurableHistory = function(durableCode, durableName) {
                         bskNumber: doc.bskNumber || doc.memoNumber || "-",
                         name: item.name,
                         qty: item.qty,
+                        unit: item.unit || "ชิ้น",
                         total: itemTotal,
                         typeBadge: typeBadge
                     });
@@ -2457,7 +2458,7 @@ window.showDurableHistory = function(durableCode, durableName) {
                             <span>${log.name}</span>
                         </div>
                     </td>
-                    <td style="text-align:center;">${log.qty}</td>
+                    <td style="text-align:center;">${log.qty} ${log.unit}</td>
                     <td style="text-align:right; font-weight:600;">${log.total.toLocaleString("th-TH", { minimumFractionDigits: 2 })}</td>
                 </tr>
             `;
@@ -2761,6 +2762,7 @@ window.printDurableHistory = function() {
                 bskNumber: doc.bskNumber || doc.docNumber || "-",
                 name: item.name,
                 qty: item.qty,
+                unit: item.unit || "ชิ้น",
                 total: itemTotal,
                 typeLabel: typeLabel
             });
@@ -2778,7 +2780,7 @@ window.printDurableHistory = function() {
                 <td>${dateFormatted}</td>
                 <td>บสค. 60 เลขที่ ${log.bskNumber}</td>
                 <td class="text-left">[${log.typeLabel}] ${log.name}</td>
-                <td>${log.qty}</td>
+                <td>${log.qty} ${log.unit}</td>
                 <td style="text-align: right;">${log.total.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿</td>
             </tr>
         `;
