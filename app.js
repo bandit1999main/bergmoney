@@ -853,7 +853,7 @@ function addFormItemRow() {
             <td><input type="date" class="item-last-date" style="width: 100%;"></td>
             <td><input type="text" class="item-last-qty" placeholder="จำนวน/หน่วย" style="width: 100%; text-align: center;"></td>
             <td><input type="number" class="item-last-price" placeholder="0.00" min="0" step="0.01" style="width: 100%; text-align: right;"></td>
-            <td><input type="number" class="item-qty" value="1" min="1" required style="width: 100%; text-align: center;"></td>
+            <td><input type="number" class="item-qty" value="1" min="0" required style="width: 100%; text-align: center;"></td>
             <td><input type="text" class="item-unit" placeholder="เช่น เครื่อง, กล่อง" value="ชิ้น" required style="width: 100%; text-align: center;"></td>
             <td><input type="number" class="item-price" placeholder="0.00" min="0" step="0.01" required style="width: 100%; text-align: right;"></td>
             <td>
@@ -912,12 +912,13 @@ async function handleBskSubmit(e) {
         const lastDate = row.querySelector(".item-last-date").value;
         const lastQty = row.querySelector(".item-last-qty").value;
         const lastPrice = row.querySelector(".item-last-price").value;
-        const qty = parseFloat(row.querySelector(".item-qty").value) || 1;
+        const qty = parseFloat(row.querySelector(".item-qty").value);
+        const qtyVal = isNaN(qty) ? 0 : qty;
         const unit = row.querySelector(".item-unit").value.trim() || "ชิ้น";
         const price = parseFloat(row.querySelector(".item-price").value) || 0;
 
-        items.push({ name, durableCode, logType, lastDate, lastQty, lastPrice, qty, unit, price });
-        total += qty * price;
+        items.push({ name, durableCode, logType, lastDate, lastQty, lastPrice, qty: qtyVal, unit, price });
+        total += qtyVal * price;
     });
 
     const requesterName = document.getElementById("requesterName").value;
@@ -1475,7 +1476,7 @@ window.editDocument = function(docId) {
                 <td><input type="date" class="item-last-date" value="${item.lastDate || ""}" style="width: 100%;" ${disabledAttr}></td>
                 <td><input type="text" class="item-last-qty" value="${item.lastQty || ""}" placeholder="จำนวน/หน่วย" style="width: 100%; text-align: center;" ${disabledAttr}></td>
                 <td><input type="number" class="item-last-price" value="${item.lastPrice || ""}" placeholder="0.00" min="0" step="0.01" style="width: 100%; text-align: right;" ${disabledAttr}></td>
-                <td><input type="number" class="item-qty" value="${item.qty || 1}" min="1" required style="width: 100%; text-align: center;" ${disabledAttr}></td>
+                <td><input type="number" class="item-qty" value="${item.qty !== undefined ? item.qty : 1}" min="0" required style="width: 100%; text-align: center;" ${disabledAttr}></td>
                 <td><input type="text" class="item-unit" value="${item.unit || "ชิ้น"}" placeholder="เช่น เครื่อง, กล่อง" required style="width: 100%; text-align: center;" ${disabledAttr}></td>
                 <td><input type="number" class="item-price" value="${item.price || 0}" placeholder="0.00" min="0" step="0.01" required style="width: 100%; text-align: right;" ${disabledAttr}></td>
                 <td>
