@@ -1719,7 +1719,6 @@ function printMonthlyReport() {
                     <tr>
                         <td>${itemIndex++}</td>
                         <td class="text-left">${item.name}</td>
-                        <td>${item.durableCode || "-"}</td>
                         <td>${cat ? cat.code : "-"}</td>
                         <td>บสค. 60 เลขที่ ${doc.bskNumber || doc.docNumber || "-"}</td>
                         <td>${doc.orderAuthority || "ตามคำสั่งที่ 4/2566"}</td>
@@ -1779,7 +1778,6 @@ function printMonthlyReport() {
                 <tr>
                     <th style="width: 5%; padding: 4px;">No</th>
                     <th style="padding: 4px;">รายการ</th>
-                    <th style="width: 12%; padding: 4px;">รหัสครุภัณฑ์</th>
                     <th style="width: 10%; padding: 4px;">รหัสบัญชี</th>
                     <th style="width: 18%; padding: 4px;">เลขที่ บสค.60</th>
                     <th style="width: 15%; padding: 4px;">คำสั่งอนุญาตซื้อ/จ้าง</th>
@@ -1789,9 +1787,9 @@ function printMonthlyReport() {
                 </tr>
             </thead>
             <tbody>
-                ${reportRowsHtml ? reportRowsHtml : '<tr><td colspan="9" style="text-align: center; padding: 12px; color: #555;">ไม่มีรายการจัดซื้อจัดจ้างในเดือนนี้</td></tr>'}
+                ${reportRowsHtml ? reportRowsHtml : '<tr><td colspan="8" style="text-align: center; padding: 12px; color: #555;">ไม่มีรายการจัดซื้อจัดจ้างในเดือนนี้</td></tr>'}
                 <tr>
-                    <td colspan="8" style="text-align: right; font-weight: bold; padding: 5px 6px;">รวมเป็นเงิน</td>
+                    <td colspan="7" style="text-align: right; font-weight: bold; padding: 5px 6px;">รวมเป็นเงิน</td>
                     <td style="text-align: right; font-weight: bold; padding: 5px 6px;">${grandTotal.toLocaleString("th-TH", { minimumFractionDigits: 2 })}</td>
                 </tr>
             </tbody>
