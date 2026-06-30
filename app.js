@@ -1594,6 +1594,7 @@ function renderMonthlyReportTable() {
         const cat = BUDGET_RULES[doc.itemCategory];
 
         doc.items.forEach(item => {
+            if (Number(item.qty) === 0) return;
             const itemTotal = item.qty * item.price;
             grandTotal += itemTotal;
             const dateFormatted = new Date(doc.docDate).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" });
@@ -1767,14 +1768,16 @@ function printMonthlyReport() {
             const accountCode = cat ? cat.code : "ไม่ระบุ";
             const accountName = cat ? cat.name : "ทั่วไป/อื่นๆ";
 
-            if (!groupedItems[accountCode]) {
-                groupedItems[accountCode] = {
-                    name: accountName,
-                    items: []
-                };
-            }
-
             doc.items.forEach(item => {
+                if (Number(item.qty) === 0) return;
+
+                if (!groupedItems[accountCode]) {
+                    groupedItems[accountCode] = {
+                        name: accountName,
+                        items: []
+                    };
+                }
+
                 const itemTotal = item.qty * item.price;
                 grandTotal += itemTotal;
                 const dateFormatted = new Date(doc.docDate).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" });
@@ -2561,6 +2564,7 @@ window.showDurableHistory = function(durableCode, durableName) {
         if (doc.items) {
             doc.items.forEach(item => {
                 if (item.durableCode && item.durableCode.trim() === durableCode.trim()) {
+                    if (Number(item.qty) === 0) return;
                     const itemTotal = (item.qty || 0) * (item.price || 0);
                     totalExpense += itemTotal;
                     
@@ -2908,7 +2912,7 @@ window.printDurableHistory = function() {
 
     appState.documents.forEach(doc => {
         if (doc.status !== "approved") return;
-        const matchingItems = doc.items.filter(item => item.durableCode === code);
+        const matchingItems = doc.items.filter(item => item.durableCode === code && Number(item.qty) !== 0);
         matchingItems.forEach(item => {
             let typeLabel = "วัสดุสิ้นเปลือง";
             if (item.logType === "main") typeLabel = "ตัวเครื่องหลัก";
