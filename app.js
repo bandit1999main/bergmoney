@@ -1404,8 +1404,12 @@ function filterHistoryData() {
             const bskMatch = (doc.bskNumber || "").toLowerCase().includes(searchVal);
             const memoMatch = (doc.memoNumber || "").toLowerCase().includes(searchVal);
             const reqMatch = (doc.requesterName || "").toLowerCase().includes(searchVal);
+            const posMatch = (doc.requesterPosition || "").toLowerCase().includes(searchVal);
+            const plateMatch = (doc.vehiclePlate || "").toLowerCase().includes(searchVal);
+            const brandMatch = (doc.vehicleBrand || "").toLowerCase().includes(searchVal);
             const itemsMatch = doc.items && doc.items.some(item => (item.name || "").toLowerCase().includes(searchVal));
-            if (!bskMatch && !memoMatch && !reqMatch && !itemsMatch) {
+            
+            if (!bskMatch && !memoMatch && !reqMatch && !posMatch && !plateMatch && !brandMatch && !itemsMatch) {
                 return false;
             }
         }
