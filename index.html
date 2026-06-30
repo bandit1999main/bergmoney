@@ -65,6 +65,58 @@
             flex-direction: column;
             gap: 1.5rem;
             flex-shrink: 0;
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        aside.collapsed {
+            width: 70px;
+            padding: 2rem 0.5rem;
+        }
+
+        aside.collapsed .brand {
+            padding: 0.25rem !important;
+        }
+
+        aside.collapsed .brand img {
+            height: 20px !important;
+        }
+
+        aside.collapsed .menu-item {
+            justify-content: center;
+            padding: 0.85rem;
+        }
+
+        aside.collapsed .menu-item span {
+            margin: 0;
+        }
+
+        /* Hide texts inside collapsed elements */
+        aside.collapsed .brand h1,
+        aside.collapsed .menu-item {
+            font-size: 0;
+        }
+        
+        aside.collapsed .menu-item span.material-symbols-outlined {
+            font-size: 24px;
+        }
+
+        aside.collapsed .sidebar-user-profile {
+            padding: 0.5rem;
+            justify-content: center;
+        }
+
+        aside.collapsed .sidebar-user-profile div {
+            display: none;
+        }
+
+        .main-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            transition: margin-left 0.3s ease;
         }
 
         .brand {
@@ -884,7 +936,12 @@
     <!-- Main Content Container -->
     <div class="main-container">
         <header>
-            <div class="page-title" id="pageTitleText">แดชบอร์ดสรุปงบประมาณ</div>
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <button class="btn-icon-only" id="sidebarToggleBtn" title="ซ่อน/แสดง เมนูนำทาง" style="margin-left: -0.5rem;">
+                    <span class="material-symbols-outlined">menu</span>
+                </button>
+                <div class="page-title" id="pageTitleText">แดชบอร์ดสรุปงบประมาณ</div>
+            </div>
             <div style="display: flex; gap: 0.5rem; align-items: center;">
                 <div class="header-user-info" id="headerUserInfo">
                     <img id="headerUserAvatar" src="" alt="">
@@ -1587,6 +1644,6 @@
     <div class="print-container" id="printSection"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script type="module" src="app.js?v=2.3.5"></script>
+    <script type="module" src="app.js?v=2.3.6"></script>
 </body>
 </html>
