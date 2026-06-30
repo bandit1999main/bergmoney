@@ -2164,6 +2164,21 @@ function renderBudgetQuotaTable(currentMonthStr) {
 
             activePlates.forEach(plate => {
                 if (!plate || plate === "ไม่ระบุทะเบียน") return;
+                
+                // ค้นหาประเภทรถจริงจากใบประวัติจัดซื้อ หรือข้อมูลทะเบียนครุภัณฑ์หลัก
+                let vType = "car";
+                const matchingDoc = vehicleDocs.find(doc => doc.vehiclePlate && doc.vehiclePlate.trim().toLowerCase() === plate.toLowerCase());
+                if (matchingDoc && matchingDoc.vehicleType) {
+                    vType = matchingDoc.vehicleType;
+                } else {
+                    const matchingDurable = appState.durables.find(d => d.vehiclePlate && d.vehiclePlate.trim().toLowerCase() === plate.toLowerCase());
+                    if (matchingDurable && matchingDurable.vehicleType) {
+                        vType = matchingDurable.vehicleType;
+                    }
+                }
+                
+                const emoji = vType === "bike" ? "🏍️" : (vType === "boat" ? "⚓️" : (vType === "twowheel" ? "🛒" : "🚗"));
+                
                 const spent = spentByPlate[plate] || 0;
                 const rem = (monthlyLimit !== undefined && monthlyLimit !== Infinity) ? (monthlyLimit - spent) : Infinity;
                 if (rem < lowestRemaining) {
@@ -2171,7 +2186,7 @@ function renderBudgetQuotaTable(currentMonthStr) {
                 }
                 
                 if (spent > 0 || rem !== Infinity) {
-                    detailsList.push(`<div style="font-size:0.75rem; color:var(--text-secondary); margin-top:2px;">🚗 ทะเบียน ${plate}: ใช้ไป ${spent.toLocaleString()}฿ (คงเหลือ ${rem === Infinity ? 'ไม่จำกัด' : rem.toLocaleString() + '฿'})</div>`);
+                    detailsList.push(`<div style="font-size:0.75rem; color:var(--text-secondary); margin-top:2px;">${emoji} ทะเบียน ${plate}: ใช้ไป ${spent.toLocaleString()}฿ (คงเหลือ ${rem === Infinity ? 'ไม่จำกัด' : rem.toLocaleString() + '฿'})</div>`);
                 }
             });
 
