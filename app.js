@@ -2153,10 +2153,20 @@ function renderBudgetQuotaTable(currentMonthStr) {
         let statusBadge = "";
 
         if (isVehicleCategory) {
-            // ดึงรายการซ่อมแซมยานพาหนะของเดือนนี้ทั้งหมด
+            // แมปคีย์หมวดหมู่กับค่าประเภทรถจริง (vehicleType)
+            const catToTypeMap = {
+                "car_repair_car": "car",
+                "car_repair_bike": "bike",
+                "car_repair_boat": "boat",
+                "car_repair_twowheel": "twowheel"
+            };
+            const targetType = catToTypeMap[key];
+
+            // ดึงรายการซ่อมแซมยานพาหนะของเดือนนี้เฉพาะที่ตรงกับหมวดหมู่นี้และมีประเภทพาหนะที่ตรงกัน
             const vehicleDocs = appState.documents.filter(doc => 
                 doc.docDate && doc.docDate.startsWith(currentMonthStr) && 
-                ["car_repair_car", "car_repair_bike", "car_repair_boat", "car_repair_twowheel"].includes(doc.itemCategory)
+                doc.itemCategory === key &&
+                (doc.vehicleType || "car") === targetType
             );
 
             // จัดกลุ่มยอดจ่ายตามทะเบียนรถ
@@ -2166,11 +2176,10 @@ function renderBudgetQuotaTable(currentMonthStr) {
                 spentByPlate[plate] = (spentByPlate[plate] || 0) + doc.total;
             });
 
-            // ตรวจหาทะเบียนรถที่มีอยู่ในระบบทะเบียนครุภัณฑ์
+            // ตรวจหาทะเบียนรถที่มีอยู่ในระบบทะเบียนครุภัณฑ์ที่ตรงกับหมวดหมู่นี้
             const activePlates = new Set(Object.keys(spentByPlate));
             appState.durables.forEach(d => {
-                const isDurableVehicle = ["car_repair_car", "car_repair_bike", "car_repair_boat", "car_repair_twowheel"].includes(d.category);
-                if (isDurableVehicle && d.vehiclePlate) {
+                if (d.category === key && (d.vehicleType || "car") === targetType && d.vehiclePlate) {
                     activePlates.add(d.vehiclePlate.trim());
                 }
             });
@@ -2181,19 +2190,7 @@ function renderBudgetQuotaTable(currentMonthStr) {
             activePlates.forEach(plate => {
                 if (!plate || plate === "ไม่ระบุทะเบียน") return;
                 
-                // ค้นหาประเภทรถจริงจากใบประวัติจัดซื้อ หรือข้อมูลทะเบียนครุภัณฑ์หลัก
-                let vType = "car";
-                const matchingDoc = vehicleDocs.find(doc => doc.vehiclePlate && doc.vehiclePlate.trim().toLowerCase() === plate.toLowerCase());
-                if (matchingDoc && matchingDoc.vehicleType) {
-                    vType = matchingDoc.vehicleType;
-                } else {
-                    const matchingDurable = appState.durables.find(d => d.vehiclePlate && d.vehiclePlate.trim().toLowerCase() === plate.toLowerCase());
-                    if (matchingDurable && matchingDurable.vehicleType) {
-                        vType = matchingDurable.vehicleType;
-                    }
-                }
-                
-                const emoji = vType === "bike" ? "🏍️" : (vType === "boat" ? "⚓️" : (vType === "twowheel" ? "🛒" : "🚗"));
+                const emoji = targetType === "bike" ? "🏍️" : (targetType === "boat" ? "⚓️" : (targetType === "twowheel" ? "🛒" : "🚗"));
                 
                 const spent = spentByPlate[plate] || 0;
                 const rem = (monthlyLimit !== undefined && monthlyLimit !== Infinity) ? (monthlyLimit - spent) : Infinity;
