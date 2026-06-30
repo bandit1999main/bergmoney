@@ -638,7 +638,7 @@ function showSuggestions(input, boxElement) {
                 const lastDateInput = row.querySelector(".item-last-date");
                 if (lastDateInput) lastDateInput.value = lastDoc.docDate;
                 const lastQtyInput = row.querySelector(".item-last-qty");
-                if (lastQtyInput) lastQtyInput.value = lastItem.qty;
+                if (lastQtyInput) lastQtyInput.value = `${lastItem.qty} ${lastItem.unit || "ชิ้น"}`;
                 const lastPriceInput = row.querySelector(".item-last-price");
                 if (lastPriceInput) lastPriceInput.value = lastItem.price;
             } else {
@@ -788,7 +788,7 @@ function addFormItemRow() {
                 </select>
             </td>
             <td><input type="date" class="item-last-date" style="width: 100%;"></td>
-            <td><input type="number" class="item-last-qty" placeholder="จำนวน" style="width: 100%; text-align: center;"></td>
+            <td><input type="text" class="item-last-qty" placeholder="จำนวน/หน่วย" style="width: 100%; text-align: center;"></td>
             <td><input type="number" class="item-last-price" placeholder="0.00" min="0" step="0.01" style="width: 100%; text-align: right;"></td>
             <td><input type="number" class="item-qty" value="1" min="1" required style="width: 100%; text-align: center;"></td>
             <td><input type="text" class="item-unit" placeholder="เช่น เครื่อง, กล่อง" value="ชิ้น" required style="width: 100%; text-align: center;"></td>
@@ -950,7 +950,7 @@ async function handleBskSubmit(e) {
                     </select>
                 </td>
                 <td><input type="date" class="item-last-date" style="width: 100%;"></td>
-                <td><input type="number" class="item-last-qty" placeholder="จำนวน" style="width: 100%; text-align: center;"></td>
+                <td><input type="text" class="item-last-qty" placeholder="จำนวน/หน่วย" style="width: 100%; text-align: center;"></td>
                 <td><input type="number" class="item-last-price" placeholder="0.00" min="0" step="0.01" style="width: 100%; text-align: right;"></td>
                 <td><input type="number" class="item-qty" value="1" min="1" required style="width: 100%; text-align: center;"></td>
                 <td><input type="text" class="item-unit" placeholder="เช่น เครื่อง, กล่อง" value="ชิ้น" required style="width: 100%; text-align: center;"></td>
@@ -1388,7 +1388,7 @@ window.editDocument = function(docId) {
                     </select>
                 </td>
                 <td><input type="date" class="item-last-date" value="${item.lastDate || ""}" style="width: 100%;"></td>
-                <td><input type="number" class="item-last-qty" value="${item.lastQty || ""}" placeholder="จำนวน" style="width: 100%; text-align: center;"></td>
+                <td><input type="text" class="item-last-qty" value="${item.lastQty || ""}" placeholder="จำนวน/หน่วย" style="width: 100%; text-align: center;"></td>
                 <td><input type="number" class="item-last-price" value="${item.lastPrice || ""}" placeholder="0.00" min="0" step="0.01" style="width: 100%; text-align: right;"></td>
                 <td><input type="number" class="item-qty" value="${item.qty || 1}" min="1" required style="width: 100%; text-align: center;"></td>
                 <td><input type="text" class="item-unit" value="${item.unit || "ชิ้น"}" placeholder="เช่น เครื่อง, กล่อง" required style="width: 100%; text-align: center;"></td>
