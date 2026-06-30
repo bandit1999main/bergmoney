@@ -449,7 +449,17 @@ function setupEventHandlers() {
     const bskForm = document.getElementById("bskForm");
     bskForm.addEventListener("submit", handleBskSubmit);
 
-    document.getElementById("addItemBtn").addEventListener("click", addFormItemRow);
+    document.getElementById("addItemBtn").addEventListener("click", () => {
+        const editingId = document.getElementById("editingBskId").value;
+        if (editingId) {
+            const doc = appState.documents.find(d => d.id === editingId);
+            if (doc && doc.status === 'approved') {
+                alert("ไม่สามารถเพิ่มรายการในใบคำขอที่อนุมัติแล้วได้");
+                return;
+            }
+        }
+        addFormItemRow();
+    });
     document.getElementById("itemCategory").addEventListener("change", () => {
         checkQuotaLimits();
         toggleVehicleMileage();
@@ -1192,6 +1202,9 @@ function renderHistoryTable(filteredDocs) {
         if (status === "approved") {
             statusBadge = `<span style="background-color:rgba(16,185,129,0.15); color:#10B981; padding:4px 10px; border-radius:12px; font-size:0.75rem; font-weight:700; display:inline-block;">🟢 อนุมัติแล้ว</span>`;
             actionsHtml = `
+                <button class="btn btn-secondary" style="padding: 4px 10px; font-size:0.8rem; background-color: var(--thp-blue); color: white; border: none;" onclick="window.editDocument('${doc.id}')" title="แก้ไข">
+                    <span class="material-symbols-outlined" style="font-size:16px;">edit</span> แก้ไข
+                </button>
                 <button class="btn btn-secondary" style="padding: 4px 10px; font-size:0.8rem;" onclick="window._printDocument('${doc.id}')">
                     <span class="material-symbols-outlined" style="font-size:16px;">print</span> พิมพ์
                 </button>
@@ -1372,43 +1385,65 @@ window.editDocument = function(docId) {
     document.getElementById("quotationYes").checked = hasQuot;
     document.getElementById("quotationNo").checked = !hasQuot;
 
+    const isApproved = doc.status === "approved";
+    const addItemBtn = document.getElementById("addItemBtn");
+    if (addItemBtn) {
+        addItemBtn.style.display = isApproved ? "none" : "inline-flex";
+    }
+
     const tbody = document.getElementById("formTableBody");
     tbody.innerHTML = "";
 
     doc.items.forEach((item, index) => {
         const rowCount = index + 1;
+        const disabledAttr = isApproved ? "readonly disabled style='background-color: var(--bg-app); opacity: 0.8;'" : "";
+        const selectDisabledAttr = isApproved ? "disabled style='background-color: var(--bg-app); opacity: 0.8;'" : "";
+        const deleteButtonHtml = isApproved ? "" : `
+            <button type="button" class="btn-icon-only remove-row-btn" style="margin: auto;">
+                <span class="material-symbols-outlined">delete</span>
+            </button>
+        `;
+
         const rowHtml = `
             <tr>
                 <td style="text-align: center;">${rowCount}</td>
                 <td class="suggest-wrapper">
-                    <input type="text" class="item-name" value="${item.name || ""}" placeholder="ระบุรายละเอียดสิ่งของ (พิมพ์เพื่อค้นหาประวัติ)" required style="width: 100%;">
+                    <input type="text" class="item-name" value="${item.name || ""}" placeholder="ระบุรายละเอียดสิ่งของ (พิมพ์เพื่อค้นหาประวัติ)" required style="width: 100%;" ${disabledAttr}>
                     <div class="suggest-box"></div>
                 </td>
                 <td>
-                    <input type="text" class="item-durable-code" value="${item.durableCode || ""}" placeholder="เช่น 51090902-001" style="width: 100%; margin-bottom: 4px;">
-                    <select class="item-log-type" style="width: 100%; font-size: 0.8rem; padding: 2px;">
+                    <input type="text" class="item-durable-code" value="${item.durableCode || ""}" placeholder="เช่น 51090902-001" style="width: 100%; margin-bottom: 4px;" ${disabledAttr}>
+                    <select class="item-log-type" style="width: 100%; font-size: 0.8rem; padding: 2px;" ${selectDisabledAttr}>
                         <option value="main" ${item.logType === 'main' ? 'selected' : ''}>⭐️ ตัวเครื่องหลัก (จัดซื้อ)</option>
                         <option value="consumable" ${item.logType === 'consumable' || !item.logType ? 'selected' : ''}>📦 วัสดุสิ้นเปลือง/หมึก/อะไหล่</option>
                         <option value="repair" ${item.logType === 'repair' ? 'selected' : ''}>🔧 จ้างซ่อมบำรุงรักษา</option>
                     </select>
                 </td>
-                <td><input type="date" class="item-last-date" value="${item.lastDate || ""}" style="width: 100%;"></td>
-                <td><input type="text" class="item-last-qty" value="${item.lastQty || ""}" placeholder="จำนวน/หน่วย" style="width: 100%; text-align: center;"></td>
-                <td><input type="number" class="item-last-price" value="${item.lastPrice || ""}" placeholder="0.00" min="0" step="0.01" style="width: 100%; text-align: right;"></td>
-                <td><input type="number" class="item-qty" value="${item.qty || 1}" min="1" required style="width: 100%; text-align: center;"></td>
-                <td><input type="text" class="item-unit" value="${item.unit || "ชิ้น"}" placeholder="เช่น เครื่อง, กล่อง" required style="width: 100%; text-align: center;"></td>
-                <td><input type="number" class="item-price" value="${item.price || 0}" placeholder="0.00" min="0" step="0.01" required style="width: 100%; text-align: right;"></td>
+                <td><input type="date" class="item-last-date" value="${item.lastDate || ""}" style="width: 100%;" ${disabledAttr}></td>
+                <td><input type="text" class="item-last-qty" value="${item.lastQty || ""}" placeholder="จำนวน/หน่วย" style="width: 100%; text-align: center;" ${disabledAttr}></td>
+                <td><input type="number" class="item-last-price" value="${item.lastPrice || ""}" placeholder="0.00" min="0" step="0.01" style="width: 100%; text-align: right;" ${disabledAttr}></td>
+                <td><input type="number" class="item-qty" value="${item.qty || 1}" min="1" required style="width: 100%; text-align: center;" ${disabledAttr}></td>
+                <td><input type="text" class="item-unit" value="${item.unit || "ชิ้น"}" placeholder="เช่น เครื่อง, กล่อง" required style="width: 100%; text-align: center;" ${disabledAttr}></td>
+                <td><input type="number" class="item-price" value="${item.price || 0}" placeholder="0.00" min="0" step="0.01" required style="width: 100%; text-align: right;" ${disabledAttr}></td>
                 <td>
-                    <button type="button" class="btn-icon-only remove-row-btn" style="margin: auto;">
-                        <span class="material-symbols-outlined">delete</span>
-                    </button>
+                    ${deleteButtonHtml}
                 </td>
             </tr>
         `;
         tbody.insertAdjacentHTML("beforeend", rowHtml);
         
         const rowElement = tbody.lastElementChild;
-        bindAutoSuggest(rowElement);
+        if (!isApproved) {
+            bindAutoSuggest(rowElement);
+            const removeBtn = rowElement.querySelector(".remove-row-btn");
+            if (removeBtn) {
+                removeBtn.addEventListener("click", (e) => {
+                    e.currentTarget.closest("tr").remove();
+                    reindexFormTable();
+                    calculateFormTotal();
+                });
+            }
+        }
     });
 
     document.getElementById("saveDocBtn").innerHTML = `<span class="material-symbols-outlined">edit</span> บันทึกการแก้ไข บสค.60`;
