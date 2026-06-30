@@ -2184,37 +2184,49 @@ function renderBudgetQuotaTable(currentMonthStr) {
                 }
             });
 
-            let detailsList = [];
-            let lowestRemaining = Infinity;
-
-            activePlates.forEach(plate => {
-                if (!plate || plate === "ไม่ระบุทะเบียน") return;
-                
-                const emoji = targetType === "bike" ? "🏍️" : (targetType === "boat" ? "⚓️" : (targetType === "twowheel" ? "🛒" : "🚗"));
-                
-                const spent = spentByPlate[plate] || 0;
-                const rem = (monthlyLimit !== undefined && monthlyLimit !== Infinity) ? (monthlyLimit - spent) : Infinity;
-                if (rem < lowestRemaining) {
-                    lowestRemaining = rem;
-                }
-                
-                if (spent > 0 || rem !== Infinity) {
-                    detailsList.push(`<div style="font-size:0.75rem; color:var(--text-secondary); margin-top:2px;">${emoji} ทะเบียน ${plate}: ใช้ไป ${spent.toLocaleString()}฿ (คงเหลือ ${rem === Infinity ? 'ไม่จำกัด' : rem.toLocaleString() + '฿'})</div>`);
-                }
-            });
-
-            spentThisMonth = vehicleDocs.filter(doc => doc.itemCategory === key).reduce((sum, doc) => sum + doc.total, 0);
-            spentText = `${spentThisMonth.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿<br/>${detailsList.join("")}`;
-            
-            remaining = lowestRemaining;
-            remainingText = remaining === Infinity ? "ไม่จำกัดงบรายเดือน" : `ขั้นต่ำเหลือ ${remaining.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿`;
-            
-            if (remaining <= 0 && remaining !== Infinity) {
-                statusBadge = `<span style="color:#EF4444; font-weight:600;">มีรถที่เต็มวงเงิน</span>`;
-            } else if (remaining < 1000 && remaining !== Infinity) {
-                statusBadge = `<span style="color:#F59E0B; font-weight:600;">ใกล้เต็มบางคัน</span>`;
+            // ถ้าไม่มีรถใด ๆ เลยในกลุ่มนี้ ให้เรนเดอร์แถวว่างแถวเดียวของหมวดหมู่เพื่อไม่ให้ตารางดูว่างเปล่า
+            if (activePlates.size === 0) {
+                const row = `
+                    <tr>
+                        <td style="font-weight:600;">${rule.name} <span style="font-size:0.75rem; color:var(--text-secondary); display:block;">รหัสบัญชี: ${rule.code}</span></td>
+                        <td>${limitPerRequestText}</td>
+                        <td>${limitPerMonthText}</td>
+                        <td style="font-weight:500;">0.00 ฿</td>
+                        <td style="font-weight:600;">${monthlyLimit === Infinity ? "ไม่จำกัด" : monthlyLimit.toLocaleString() + " ฿"}</td>
+                        <td><span style="color:#10B981; font-weight:600;">พร้อมใช้งาน</span></td>
+                    </tr>
+                `;
+                tbody.insertAdjacentHTML("beforeend", row);
             } else {
-                statusBadge = `<span style="color:#10B981; font-weight:600;">พร้อมใช้งาน</span>`;
+                activePlates.forEach(plate => {
+                    if (!plate || plate === "ไม่ระบุทะเบียน") return;
+                    
+                    const emoji = targetType === "bike" ? "🏍️" : (targetType === "boat" ? "⚓️" : (targetType === "twowheel" ? "🛒" : "🚗"));
+                    const spent = spentByPlate[plate] || 0;
+                    const rem = (monthlyLimit !== undefined && monthlyLimit !== Infinity) ? (monthlyLimit - spent) : Infinity;
+                    
+                    let statusBadge = `<span style="color:#10B981; font-weight:600;">พร้อมใช้งาน</span>`;
+                    if (rem <= 0 && rem !== Infinity) {
+                        statusBadge = `<span style="color:#EF4444; font-weight:600;">เต็มวงเงินแล้ว</span>`;
+                    } else if (rem < 1000 && rem !== Infinity) {
+                        statusBadge = `<span style="color:#F59E0B; font-weight:600;">ใกล้เต็ม</span>`;
+                    }
+
+                    const row = `
+                        <tr style="background-color: rgba(16, 185, 129, 0.02);">
+                            <td style="font-weight:600;">
+                                ${rule.name} <span style="font-weight: 700; color: var(--thp-blue);">${emoji} ทะเบียน ${plate}</span>
+                                <span style="font-size:0.75rem; color:var(--text-secondary); display:block;">รหัสบัญชี: ${rule.code}</span>
+                            </td>
+                            <td>${limitPerRequestText}</td>
+                            <td>${limitPerMonthText}</td>
+                            <td style="font-weight:500;">${spent.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿</td>
+                            <td style="font-weight:600; color: ${rem <= 0 ? '#EF4444' : 'inherit'}">${rem === Infinity ? "ไม่จำกัด" : rem.toLocaleString("th-TH", { minimumFractionDigits: 2 }) + " ฿"}</td>
+                            <td>${statusBadge}</td>
+                        </tr>
+                    `;
+                    tbody.insertAdjacentHTML("beforeend", row);
+                });
             }
         } else {
             spentThisMonth = appState.documents
@@ -2232,19 +2244,19 @@ function renderBudgetQuotaTable(currentMonthStr) {
             } else {
                 statusBadge = `<span style="color:#10B981; font-weight:600;">พร้อมใช้งาน</span>`;
             }
-        }
 
-        const row = `
-            <tr>
-                <td style="font-weight:600;">${rule.name} <span style="font-size:0.75rem; color:var(--text-secondary); display:block;">รหัสบัญชี: ${rule.code}</span></td>
-                <td>${limitPerRequestText}</td>
-                <td>${limitPerMonthText}</td>
-                <td style="font-weight:500; font-size: 0.85rem; line-height: 1.4;">${spentText}</td>
-                <td style="font-weight:600; color: ${remaining <= 0 ? '#EF4444' : 'inherit'}">${remainingText}</td>
-                <td>${statusBadge}</td>
-            </tr>
-        `;
-        tbody.insertAdjacentHTML("beforeend", row);
+            const row = `
+                <tr>
+                    <td style="font-weight:600;">${rule.name} <span style="font-size:0.75rem; color:var(--text-secondary); display:block;">รหัสบัญชี: ${rule.code}</span></td>
+                    <td>${limitPerRequestText}</td>
+                    <td>${limitPerMonthText}</td>
+                    <td style="font-weight:500;">${spentText}</td>
+                    <td style="font-weight:600; color: ${remaining <= 0 ? '#EF4444' : 'inherit'}">${remainingText}</td>
+                    <td>${statusBadge}</td>
+                </tr>
+            `;
+            tbody.insertAdjacentHTML("beforeend", row);
+        }
     });
 }
 
@@ -2805,14 +2817,6 @@ window.printDashboardReport = function() {
             limitPerMonthText = `${monthlyLimit.toLocaleString()} ฿`;
         }
 
-        const isVehicleCategory = ["car_repair_car", "car_repair_bike", "car_repair_boat", "car_repair_twowheel"].includes(key);
-        
-        let spentThisMonth = 0;
-        let remaining = Infinity;
-        let remainingText = "";
-        let spentText = "";
-        let statusText = "";
-
         if (isVehicleCategory) {
             const catToTypeMap = {
                 "car_repair_car": "car",
@@ -2843,36 +2847,46 @@ window.printDashboardReport = function() {
                 }
             });
 
-            let detailsList = [];
-            let lowestRemaining = Infinity;
-
-            activePlates.forEach(plate => {
-                if (!plate || plate === "ไม่ระบุทะเบียน") return;
-                
-                const emoji = targetType === "bike" ? "🏍️" : (targetType === "boat" ? "⚓️" : (targetType === "twowheel" ? "🛒" : "🚗"));
-                const spent = spentByPlate[plate] || 0;
-                const rem = (monthlyLimit !== undefined && monthlyLimit !== Infinity) ? (monthlyLimit - spent) : Infinity;
-                if (rem < lowestRemaining) {
-                    lowestRemaining = rem;
-                }
-                
-                if (spent > 0 || rem !== Infinity) {
-                    detailsList.push(`<div style="font-size: 7.5pt; color: #4A5568; margin-top: 1px; text-align: left; padding-left: 10px;">${emoji} ทะเบียน ${plate}: ใช้ไป ${spent.toLocaleString()}฿ (คงเหลือ ${rem === Infinity ? 'ไม่จำกัด' : rem.toLocaleString() + '฿'})</div>`);
-                }
-            });
-
-            spentThisMonth = vehicleDocs.reduce((sum, doc) => sum + doc.total, 0);
-            spentText = `${spentThisMonth.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿${detailsList.join("")}`;
-            
-            remaining = lowestRemaining;
-            remainingText = remaining === Infinity ? "ไม่จำกัด" : `ขั้นต่ำเหลือ ${remaining.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿`;
-            
-            if (remaining <= 0 && remaining !== Infinity) {
-                statusText = "มีรถเต็มวงเงิน";
-            } else if (remaining < 1000 && remaining !== Infinity) {
-                statusText = "ใกล้เต็มบางคัน";
+            if (activePlates.size === 0) {
+                tableRowsHtml += `
+                    <tr>
+                        <td class="text-left" style="font-weight: bold; padding: 6px 8px;">${rule.name}<br><span style="font-size: 8pt; color: #4A5568; font-weight: normal;">รหัสบัญชี: ${rule.code}</span></td>
+                        <td style="padding: 6px 8px;">${limitPerRequestText}</td>
+                        <td style="padding: 6px 8px;">${limitPerMonthText}</td>
+                        <td style="text-align: right; padding: 6px 8px;">0.00 ฿</td>
+                        <td style="text-align: right; font-weight: bold; padding: 6px 8px;">${monthlyLimit === Infinity ? "ไม่จำกัด" : monthlyLimit.toLocaleString() + " ฿"}</td>
+                        <td style="padding: 6px 8px;">พร้อมใช้งาน</td>
+                    </tr>
+                `;
             } else {
-                statusText = "พร้อมใช้งาน";
+                activePlates.forEach(plate => {
+                    if (!plate || plate === "ไม่ระบุทะเบียน") return;
+
+                    const emoji = targetType === "bike" ? "🏍️" : (targetType === "boat" ? "⚓️" : (targetType === "twowheel" ? "🛒" : "🚗"));
+                    const spent = spentByPlate[plate] || 0;
+                    const rem = (monthlyLimit !== undefined && monthlyLimit !== Infinity) ? (monthlyLimit - spent) : Infinity;
+
+                    let statusText = "พร้อมใช้งาน";
+                    if (rem <= 0 && rem !== Infinity) {
+                        statusText = "เต็มวงเงินแล้ว";
+                    } else if (rem < 1000 && rem !== Infinity) {
+                        statusText = "ใกล้เต็ม";
+                    }
+
+                    tableRowsHtml += `
+                        <tr style="background-color: #fafbfc;">
+                            <td class="text-left" style="font-weight: bold; padding: 6px 8px;">
+                                ${rule.name} <span style="font-weight: bold; color: var(--thp-blue);">${emoji} ทะเบียน ${plate}</span>
+                                <br><span style="font-size: 8pt; color: #4A5568; font-weight: normal;">รหัสบัญชี: ${rule.code}</span>
+                            </td>
+                            <td style="padding: 6px 8px;">${limitPerRequestText}</td>
+                            <td style="padding: 6px 8px;">${limitPerMonthText}</td>
+                            <td style="text-align: right; padding: 6px 8px;">${spent.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿</td>
+                            <td style="text-align: right; font-weight: bold; padding: 6px 8px;">${rem === Infinity ? "ไม่จำกัด" : rem.toLocaleString("th-TH", { minimumFractionDigits: 2 }) + " ฿"}</td>
+                            <td style="padding: 6px 8px;">${statusText}</td>
+                        </tr>
+                    `;
+                });
             }
         } else {
             spentThisMonth = currentMonthDocs
@@ -2890,18 +2904,18 @@ window.printDashboardReport = function() {
             } else {
                 statusText = "พร้อมใช้งาน";
             }
-        }
 
-        tableRowsHtml += `
-            <tr>
-                <td class="text-left" style="font-weight: bold; padding: 6px 8px;">${rule.name}<br><span style="font-size: 8pt; color: #4A5568; font-weight: normal;">รหัสบัญชี: ${rule.code}</span></td>
-                <td style="padding: 6px 8px;">${limitPerRequestText}</td>
-                <td style="padding: 6px 8px;">${limitPerMonthText}</td>
-                <td style="text-align: right; padding: 6px 8px; font-size: 8.5pt; line-height: 1.3;">${spentText}</td>
-                <td style="text-align: right; font-weight: bold; padding: 6px 8px; font-size: 8.5pt;">${remainingText}</td>
-                <td style="padding: 6px 8px;">${statusText}</td>
-            </tr>
-        `;
+            tableRowsHtml += `
+                <tr>
+                    <td class="text-left" style="font-weight: bold; padding: 6px 8px;">${rule.name}<br><span style="font-size: 8pt; color: #4A5568; font-weight: normal;">รหัสบัญชี: ${rule.code}</span></td>
+                    <td style="padding: 6px 8px;">${limitPerRequestText}</td>
+                    <td style="padding: 6px 8px;">${limitPerMonthText}</td>
+                    <td style="text-align: right; padding: 6px 8px;">${spentText}</td>
+                    <td style="text-align: right; font-weight: bold; padding: 6px 8px;">${remainingText}</td>
+                    <td style="padding: 6px 8px;">${statusText}</td>
+                </tr>
+            `;
+        }
     });
 
     const officeName = appState.settings.officeName || "ที่ทำการไปรษณีย์มาบตาพุด";
