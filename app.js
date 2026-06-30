@@ -776,6 +776,7 @@ function addFormItemRow() {
             <td><input type="number" class="item-last-qty" placeholder="จำนวน" style="width: 100%; text-align: center;"></td>
             <td><input type="number" class="item-last-price" placeholder="0.00" min="0" step="0.01" style="width: 100%; text-align: right;"></td>
             <td><input type="number" class="item-qty" value="1" min="1" required style="width: 100%; text-align: center;"></td>
+            <td><input type="text" class="item-unit" placeholder="เช่น เครื่อง, กล่อง" value="ชิ้น" required style="width: 100%; text-align: center;"></td>
             <td><input type="number" class="item-price" placeholder="0.00" min="0" step="0.01" required style="width: 100%; text-align: right;"></td>
             <td>
                 <button type="button" class="btn-icon-only remove-row-btn" style="margin: auto;">
@@ -834,9 +835,10 @@ async function handleBskSubmit(e) {
         const lastQty = row.querySelector(".item-last-qty").value;
         const lastPrice = row.querySelector(".item-last-price").value;
         const qty = parseFloat(row.querySelector(".item-qty").value) || 1;
+        const unit = row.querySelector(".item-unit").value.trim() || "ชิ้น";
         const price = parseFloat(row.querySelector(".item-price").value) || 0;
 
-        items.push({ name, durableCode, logType, lastDate, lastQty, lastPrice, qty, price });
+        items.push({ name, durableCode, logType, lastDate, lastQty, lastPrice, qty, unit, price });
         total += qty * price;
     });
 
@@ -936,6 +938,7 @@ async function handleBskSubmit(e) {
                 <td><input type="number" class="item-last-qty" placeholder="จำนวน" style="width: 100%; text-align: center;"></td>
                 <td><input type="number" class="item-last-price" placeholder="0.00" min="0" step="0.01" style="width: 100%; text-align: right;"></td>
                 <td><input type="number" class="item-qty" value="1" min="1" required style="width: 100%; text-align: center;"></td>
+                <td><input type="text" class="item-unit" placeholder="เช่น เครื่อง, กล่อง" value="ชิ้น" required style="width: 100%; text-align: center;"></td>
                 <td><input type="number" class="item-price" placeholder="0.00" min="0" step="0.01" required style="width: 100%; text-align: right;"></td>
                 <td>
                     <button type="button" class="btn-icon-only remove-row-btn" style="margin: auto;">
@@ -1373,6 +1376,7 @@ window.editDocument = function(docId) {
                 <td><input type="number" class="item-last-qty" value="${item.lastQty || ""}" placeholder="จำนวน" style="width: 100%; text-align: center;"></td>
                 <td><input type="number" class="item-last-price" value="${item.lastPrice || ""}" placeholder="0.00" min="0" step="0.01" style="width: 100%; text-align: right;"></td>
                 <td><input type="number" class="item-qty" value="${item.qty || 1}" min="1" required style="width: 100%; text-align: center;"></td>
+                <td><input type="text" class="item-unit" value="${item.unit || "ชิ้น"}" placeholder="เช่น เครื่อง, กล่อง" required style="width: 100%; text-align: center;"></td>
                 <td><input type="number" class="item-price" value="${item.price || 0}" placeholder="0.00" min="0" step="0.01" required style="width: 100%; text-align: right;"></td>
                 <td>
                     <button type="button" class="btn-icon-only remove-row-btn" style="margin: auto;">
@@ -1528,7 +1532,7 @@ function printDocument(docId) {
                 <td>${lastDateFormatted}</td>
                 <td>${lastQtyText}</td>
                 <td style="text-align: right;">${lastPriceText}</td>
-                <td>${item.qty}</td>
+                <td>${item.qty} ${item.unit || "ชิ้น"}</td>
                 <td style="text-align: right;">${(item.qty * item.price).toLocaleString("th-TH", { minimumFractionDigits: 2 })}</td>
                 <td>${item.remark || ""}</td>
             </tr>
