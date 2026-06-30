@@ -1001,16 +1001,17 @@ function renderDurableTable() {
         const catName = cat ? cat.name : "-";
         const qtyVal = typeof d.qty !== 'undefined' ? parseInt(d.qty) : 0;
         const minQtyVal = typeof d.minQty !== 'undefined' ? parseInt(d.minQty) : 3;
+        const unitVal = d.unit || "ชิ้น";
         const statusBadge = getStatusBadge(d.status);
 
-        let qtyDisplay = `<span>${qtyVal}</span>`;
+        let qtyDisplay = `<span>${qtyVal} ${unitVal}</span>`;
         let rowStyle = "";
 
         if (qtyVal === 0) {
             qtyDisplay = `<span style="color: #E31837; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><span class="material-symbols-outlined" style="font-size:16px;">error</span> หมดคลัง</span>`;
             rowStyle = `style="background-color: rgba(227, 24, 55, 0.08);"`;
         } else if (qtyVal <= minQtyVal) {
-            qtyDisplay = `<span style="color: #D97706; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><span class="material-symbols-outlined" style="font-size:16px;">warning</span> ${qtyVal} (ใกล้หมด)</span>`;
+            qtyDisplay = `<span style="color: #D97706; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><span class="material-symbols-outlined" style="font-size:16px;">warning</span> ${qtyVal} ${unitVal} (ใกล้หมด)</span>`;
             rowStyle = `style="background-color: rgba(217, 119, 6, 0.08);"`;
         }
 
@@ -1028,7 +1029,7 @@ function renderDurableTable() {
                 </td>
                 <td>${catName}</td>
                 <td style="text-align:center;">${qtyDisplay}</td>
-                <td style="text-align:center; color: var(--text-secondary); font-weight: 500;">${minQtyVal}</td>
+                <td style="text-align:center; color: var(--text-secondary); font-weight: 500;">${minQtyVal} ${unitVal}</td>
                 <td style="text-align:center;">${statusBadge}</td>
                 <td>${d.remark || "-"}</td>
                 <td>
@@ -1058,6 +1059,7 @@ async function handleDurableSubmit(e) {
     const category = document.getElementById("durableCategory").value;
     const qty = parseInt(document.getElementById("durableQty").value) || 0;
     const minQty = parseInt(document.getElementById("durableMinQty").value) || 0;
+    const unit = document.getElementById("durableUnit").value.trim() || "ชิ้น";
     const status = document.getElementById("durableStatus").value;
     const remark = document.getElementById("durableRemark").value.trim();
 
@@ -1071,6 +1073,7 @@ async function handleDurableSubmit(e) {
         category,
         qty,
         minQty,
+        unit,
         status,
         remark,
         vehiclePlate: vehiclePlate || "",
@@ -1090,6 +1093,7 @@ async function handleDurableSubmit(e) {
                 durable.category = category;
                 durable.qty = qty;
                 durable.minQty = minQty;
+                durable.unit = unit;
                 durable.status = status;
                 durable.remark = remark;
                 durable.vehiclePlate = vehiclePlate || "";
@@ -1125,6 +1129,7 @@ window.editDurable = function(id) {
     document.getElementById("durableCategory").value = d.category;
     document.getElementById("durableQty").value = typeof d.qty !== 'undefined' ? d.qty : 0;
     document.getElementById("durableMinQty").value = typeof d.minQty !== 'undefined' ? d.minQty : 3;
+    document.getElementById("durableUnit").value = d.unit || "ชิ้น";
     document.getElementById("durableStatus").value = d.status || "active";
     document.getElementById("durableRemark").value = d.remark || "";
     document.getElementById("durableVehiclePlate").value = d.vehiclePlate || "";
@@ -2250,14 +2255,15 @@ function exportDurablesCSV() {
     }
 
     let csvContent = "\uFEFF"; // UTF-8 BOM
-    csvContent += "รหัสครุภัณฑ์,ชื่อครุภัณฑ์/รายการ,หมวดหมู่รายจ่าย,จำนวน,หมายเหตุ\r\n";
+    csvContent += "รหัสครุภัณฑ์,ชื่อครุภัณฑ์/รายการ,หมวดหมู่รายจ่าย,จำนวน,หน่วยนับ,หมายเหตุ\r\n";
 
     appState.durables.forEach(d => {
         const code = (d.code || "").replace(/"/g, '""');
         const name = (d.name || "").replace(/"/g, '""');
         const qty = d.qty || 0;
+        const unit = d.unit || "ชิ้น";
         const remark = (d.remark || "").replace(/"/g, '""');
-        csvContent += `"${code}","${name}","${d.category}",${qty},"${remark}"\r\n`;
+        csvContent += `"${code}","${name}","${d.category}",${qty},"${unit}","${remark}"\r\n`;
     });
 
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -2293,7 +2299,8 @@ async function importDurablesCSV(e) {
             const name = cols[1].trim();
             const categoryStr = cols[2] ? cols[2].trim() : "";
             const qty = cols[3] ? parseInt(cols[3].trim()) || 0 : 0;
-            const remark = cols[4] ? cols[4].trim() : "";
+            const unit = cols[4] ? cols[4].trim() : "ชิ้น";
+            const remark = cols[5] ? cols[5].trim() : "";
 
             if (!code || !name) continue;
 
@@ -2311,6 +2318,7 @@ async function importDurablesCSV(e) {
                     name: existing.name,
                     category: existing.category,
                     qty: existing.qty,
+                    unit: existing.unit || "ชิ้น",
                     remark: existing.remark
                 });
                 updateCount++;
@@ -2320,6 +2328,7 @@ async function importDurablesCSV(e) {
                     name,
                     category,
                     qty,
+                    unit: unit || "ชิ้น",
                     remark,
                     createdAt: getServerTimestamp()
                 };
