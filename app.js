@@ -578,12 +578,53 @@ function showSuggestions(input, boxElement) {
     const val = input.value.trim().toLowerCase();
     boxElement.innerHTML = "";
 
-    if (!appState.durables || appState.durables.length === 0) {
+    // 1. ดึงรายการจากทะเบียนครุภัณฑ์หลัก
+    let itemsPool = [];
+    if (appState.durables && appState.durables.length > 0) {
+        appState.durables.forEach(d => {
+            itemsPool.push({
+                name: d.name,
+                code: d.code,
+                category: d.category,
+                logType: "main", // ค่าเริ่มต้นสำหรับครุภัณฑ์หลัก
+                vehiclePlate: d.vehiclePlate || "",
+                vehicleBrand: d.vehicleBrand || "",
+                vehicleMileage: d.vehicleMileage || "",
+                isDurable: true
+            });
+        });
+    }
+
+    // 2. ดึงประวัติรายการทั้งหมดที่เคยจัดซื้อจัดจ้างจาก บสค. 60 ในอดีตมาเสริม
+    if (appState.documents && appState.documents.length > 0) {
+        appState.documents.forEach(doc => {
+            if (doc.items && doc.items.length > 0) {
+                doc.items.forEach(it => {
+                    // ตรวจเช็คเพื่อไม่ให้ชื่อซ้ำซ้อนกับใน pool
+                    const exists = itemsPool.some(x => x.name.trim().toLowerCase() === it.name.trim().toLowerCase());
+                    if (!exists) {
+                        itemsPool.push({
+                            name: it.name,
+                            code: it.durableCode || "",
+                            category: doc.itemCategory || "",
+                            logType: it.logType || "consumable",
+                            vehiclePlate: doc.vehiclePlate || "",
+                            vehicleBrand: doc.vehicleBrand || "",
+                            vehicleMileage: doc.vehicleMileage || "",
+                            isDurable: false
+                        });
+                    }
+                });
+            }
+        });
+    }
+
+    if (itemsPool.length === 0) {
         boxElement.style.display = "none";
         return;
     }
 
-    const suggestions = appState.durables.filter(d => 
+    const suggestions = itemsPool.filter(d => 
         d.name.toLowerCase().includes(val) || 
         d.code.toLowerCase().includes(val)
     );
@@ -599,7 +640,14 @@ function showSuggestions(input, boxElement) {
         div.style.padding = "8px 12px";
         div.style.cursor = "pointer";
         div.style.borderBottom = "1px solid var(--border-color)";
-        div.innerHTML = `<strong>${d.name}</strong> <span style="font-size:0.8rem; color:var(--text-secondary);">(${d.code})</span>`;
+        
+        let subText = d.code ? `(${d.code})` : "";
+        let badgeText = "";
+        if (d.logType === "repair") badgeText = `<span style="font-size:0.7rem; background:#fee2e2; color:#ef4444; padding:2px 6px; border-radius:4px; margin-left:6px; font-weight:600;">🔧 จ้างซ่อม</span>`;
+        else if (d.logType === "consumable") badgeText = `<span style="font-size:0.7rem; background:#ffedd5; color:#ea580c; padding:2px 6px; border-radius:4px; margin-left:6px; font-weight:600;">📦 วัสดุสิ้นเปลือง</span>`;
+        else badgeText = `<span style="font-size:0.7rem; background:#dbeafe; color:#2563eb; padding:2px 6px; border-radius:4px; margin-left:6px; font-weight:600;">⭐️ ครุภัณฑ์</span>`;
+
+        div.innerHTML = `<strong>${d.name}</strong> ${subText} ${badgeText}`;
 
         div.addEventListener("click", () => {
             input.value = d.name;
@@ -607,6 +655,11 @@ function showSuggestions(input, boxElement) {
             
             const codeInput = row.querySelector(".item-durable-code");
             if (codeInput) codeInput.value = d.code;
+            
+            const logTypeSelect = row.querySelector(".item-log-type");
+            if (logTypeSelect && d.logType) {
+                logTypeSelect.value = d.logType;
+            }
             
             if (d.category) {
                 const categorySelect = document.getElementById("itemCategory");
