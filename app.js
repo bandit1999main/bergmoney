@@ -1720,7 +1720,7 @@ function printMonthlyReport() {
                         <td>${itemIndex++}</td>
                         <td class="text-left">${item.name}</td>
                         <td>${cat ? cat.code : "-"}</td>
-                        <td>บสค. 60 เลขที่ ${doc.bskNumber || doc.docNumber || "-"}</td>
+                        <td>${doc.bskNumber || doc.docNumber || "-"}</td>
                         <td>${doc.orderAuthority || "ตามคำสั่งที่ 4/2566"}</td>
                         <td>${dateFormatted}</td>
                         <td>${doc.necessityReason || "เพื่อใช้ในงานปฏิบัติงาน"}</td>
