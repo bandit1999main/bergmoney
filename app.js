@@ -612,6 +612,7 @@ function showSuggestions(input, boxElement) {
                             code: it.durableCode || "",
                             category: doc.itemCategory || "",
                             logType: it.logType || "consumable",
+                            vehicleType: doc.vehicleType || "car",
                             vehiclePlate: doc.vehiclePlate || "",
                             vehicleBrand: doc.vehicleBrand || "",
                             vehicleMileage: doc.vehicleMileage || "",
@@ -675,7 +676,10 @@ function showSuggestions(input, boxElement) {
             }
 
             // เติมข้อมูลยานพาหนะถ้าเป็นครุภัณฑ์ยานพาหนะและมีค่าบันทึกอยู่
-            if (d.vehiclePlate || d.vehicleBrand || d.vehicleMileage) {
+            if (d.vehiclePlate || d.vehicleBrand || d.vehicleMileage || d.vehicleType) {
+                const typeSelect = document.getElementById("vehicleType");
+                if (typeSelect && d.vehicleType) typeSelect.value = d.vehicleType;
+                
                 const plateInput = document.getElementById("vehiclePlate");
                 if (plateInput) plateInput.value = d.vehiclePlate || "";
                 const brandInput = document.getElementById("vehicleBrand");
@@ -950,6 +954,7 @@ async function handleBskSubmit(e) {
     const requesterName = document.getElementById("requesterName").value;
     const requesterPosition = document.getElementById("requesterPosition").value;
 
+    const vehicleTypeVal = document.getElementById("vehicleType").value;
     const vehicleMileageVal = document.getElementById("vehicleMileage").value;
     const vehiclePlateVal = document.getElementById("vehiclePlate").value;
     const vehicleBrandVal = document.getElementById("vehicleBrand").value;
@@ -968,6 +973,7 @@ async function handleBskSubmit(e) {
         requesterPosition,
         orderAuthority,
         necessityReason,
+        vehicleType: vehicleTypeVal || "car",
         vehicleMileage: vehicleMileageVal || "",
         vehiclePlate: vehiclePlateVal || "",
         vehicleBrand: vehicleBrandVal || "",
@@ -1112,7 +1118,7 @@ function renderDurableTable() {
                     <div style="font-weight: 500;">${d.name}</div>
                     ${d.vehiclePlate || d.vehicleBrand || d.vehicleMileage ? `
                     <div style="font-size: 0.8rem; color: var(--thp-blue); margin-top: 4px; display: flex; gap: 8px; align-items: center; background: #f0f4f9; padding: 2px 6px; border-radius: 4px; width: fit-content;">
-                        <span>🚗 ${d.vehiclePlate || '-'}</span>
+                        <span>${d.vehicleType === 'bike' ? '🏍️' : (d.vehicleType === 'boat' ? '⚓️' : (d.vehicleType === 'twowheel' ? '🛒' : '🚗'))} ${d.vehiclePlate || '-'}</span>
                         ${d.vehicleBrand ? `<span>• ${d.vehicleBrand}</span>` : ''}
                         ${d.vehicleMileage ? `<span>• ไมล์ล่าสุด: ${Number(d.vehicleMileage).toLocaleString()} กม.</span>` : ''}
                     </div>` : ''}
@@ -1153,6 +1159,7 @@ async function handleDurableSubmit(e) {
     const status = document.getElementById("durableStatus").value;
     const remark = document.getElementById("durableRemark").value.trim();
 
+    const vehicleType = document.getElementById("durableVehicleType").value;
     const vehiclePlate = document.getElementById("durableVehiclePlate").value.trim();
     const vehicleBrand = document.getElementById("durableVehicleBrand").value.trim();
     const vehicleMileage = document.getElementById("durableVehicleMileage").value.trim();
@@ -1166,6 +1173,7 @@ async function handleDurableSubmit(e) {
         unit,
         status,
         remark,
+        vehicleType: vehicleType || "car",
         vehiclePlate: vehiclePlate || "",
         vehicleBrand: vehicleBrand || "",
         vehicleMileage: vehicleMileage || "",
@@ -1186,6 +1194,7 @@ async function handleDurableSubmit(e) {
                 durable.unit = unit;
                 durable.status = status;
                 durable.remark = remark;
+                durable.vehicleType = vehicleType || "car";
                 durable.vehiclePlate = vehiclePlate || "";
                 durable.vehicleBrand = vehicleBrand || "";
                 durable.vehicleMileage = vehicleMileage || "";
@@ -1222,6 +1231,7 @@ window.editDurable = function(id) {
     document.getElementById("durableUnit").value = d.unit || "ชิ้น";
     document.getElementById("durableStatus").value = d.status || "active";
     document.getElementById("durableRemark").value = d.remark || "";
+    document.getElementById("durableVehicleType").value = d.vehicleType || "car";
     document.getElementById("durableVehiclePlate").value = d.vehiclePlate || "";
     document.getElementById("durableVehicleBrand").value = d.vehicleBrand || "";
     document.getElementById("durableVehicleMileage").value = d.vehicleMileage || "";
@@ -1460,6 +1470,12 @@ window.editDocument = function(docId) {
     document.getElementById("necessityReason").value = doc.necessityReason || "";
     document.getElementById("requesterName").value = doc.requesterName || "";
     document.getElementById("requesterPosition").value = doc.requesterPosition || "";
+    
+    const typeSelect = document.getElementById("vehicleType");
+    if (typeSelect) {
+        typeSelect.value = doc.vehicleType || "car";
+    }
+    
     document.getElementById("vehicleMileage").value = doc.vehicleMileage || "";
     document.getElementById("vehiclePlate").value = doc.vehiclePlate || "";
     document.getElementById("vehicleBrand").value = doc.vehicleBrand || "";
