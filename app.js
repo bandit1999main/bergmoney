@@ -464,6 +464,10 @@ function setupEventHandlers() {
         checkQuotaLimits();
         toggleVehicleMileage();
     });
+    const vehiclePlateInput = document.getElementById("vehiclePlate");
+    if (vehiclePlateInput) {
+        vehiclePlateInput.addEventListener("input", checkQuotaLimits);
+    }
     document.getElementById("formTableBody").addEventListener("input", handleTableInput);
 
     // Dialog จัดการครุภัณฑ์
@@ -803,13 +807,35 @@ function checkQuotaLimits() {
     const limitMonth = getLimitPerMonth(category, group);
     if (limitMonth !== undefined && limitMonth !== Infinity && !isOverLimit) {
         const currentMonthStr = document.getElementById("docDate").value.substring(0, 7);
-        const spentThisMonth = appState.documents
-            .filter(doc => doc.docDate.startsWith(currentMonthStr) && doc.itemCategory === category)
-            .reduce((sum, doc) => sum + doc.total, 0);
+        const isVehicleCategory = ["car_repair_car", "car_repair_bike", "car_repair_boat", "car_repair_twowheel"].includes(category);
+        
+        if (isVehicleCategory) {
+            // นับวงเงินแยกตามคัน (คัดกรองจากทะเบียนรถ)
+            const vehiclePlate = document.getElementById("vehiclePlate").value.trim();
+            if (vehiclePlate) {
+                const spentThisMonth = appState.documents
+                    .filter(doc => 
+                        doc.docDate.startsWith(currentMonthStr) && 
+                        ["car_repair_car", "car_repair_bike", "car_repair_boat", "car_repair_twowheel"].includes(doc.itemCategory) &&
+                        doc.vehiclePlate && doc.vehiclePlate.trim().toLowerCase() === vehiclePlate.toLowerCase()
+                    )
+                    .reduce((sum, doc) => sum + doc.total, 0);
 
-        if (spentThisMonth + total > limitMonth) {
-            isOverLimit = true;
-            message = `งบรวมสะสมเดือนนี้เท่ากับ ${(spentThisMonth + total).toLocaleString()} บาท ซึ่งเกินวงเงินจำกัดต่อเดือนที่ ${limitMonth.toLocaleString()} บาท`;
+                if (spentThisMonth + total > limitMonth) {
+                    isOverLimit = true;
+                    message = `ยอดซ่อมสะสมเดือนนี้ของยานพาหนะทะเบียน "${vehiclePlate}" เท่ากับ ${(spentThisMonth + total).toLocaleString()} บาท ซึ่งเกินวงเงินจำกัดต่อคันต่อเดือนที่ ${limitMonth.toLocaleString()} บาท`;
+                }
+            }
+        } else {
+            // หมวดหมู่ปกติ: คัดกรองตามหมวดรายจ่ายตามปกติ
+            const spentThisMonth = appState.documents
+                .filter(doc => doc.docDate.startsWith(currentMonthStr) && doc.itemCategory === category)
+                .reduce((sum, doc) => sum + doc.total, 0);
+
+            if (spentThisMonth + total > limitMonth) {
+                isOverLimit = true;
+                message = `งบรวมสะสมเดือนนี้เท่ากับ ${(spentThisMonth + total).toLocaleString()} บาท ซึ่งเกินวงเงินจำกัดต่อเดือนที่ ${limitMonth.toLocaleString()} บาท`;
+            }
         }
     }
 
