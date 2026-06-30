@@ -1703,32 +1703,118 @@ function printMonthlyReport() {
     const yearName = dateObj.toLocaleDateString("th-TH", { year: "numeric" });
     const printSection = document.getElementById("printSection");
 
-    let reportRowsHtml = "";
+    // จัดกลุ่มข้อมูลตามรหัสบัญชี
+    const groupedItems = {};
     let grandTotal = 0;
-    let itemIndex = 1;
 
     if (monthlyDocs.length > 0) {
         monthlyDocs.forEach(doc => {
             const cat = BUDGET_RULES[doc.itemCategory];
+            const accountCode = cat ? cat.code : "ไม่ระบุ";
+            const accountName = cat ? cat.name : "ทั่วไป/อื่นๆ";
+
+            if (!groupedItems[accountCode]) {
+                groupedItems[accountCode] = {
+                    name: accountName,
+                    items: []
+                };
+            }
+
             doc.items.forEach(item => {
                 const itemTotal = item.qty * item.price;
                 grandTotal += itemTotal;
                 const dateFormatted = new Date(doc.docDate).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" });
 
-                reportRowsHtml += `
+                groupedItems[accountCode].items.push({
+                    name: item.name,
+                    bskNumber: doc.bskNumber || doc.docNumber || "-",
+                    orderAuthority: doc.orderAuthority || "ตามคำสั่งที่ 4/2566",
+                    dateFormatted: dateFormatted,
+                    necessityReason: doc.necessityReason || "เพื่อใช้ในงานปฏิบัติงาน",
+                    total: itemTotal
+                });
+            });
+        });
+    }
+
+    let reportContentHtml = "";
+    let itemIndex = 1;
+
+    const accountCodes = Object.keys(groupedItems).sort();
+
+    if (accountCodes.length === 0) {
+        reportContentHtml = `
+            <table class="item-table" style="font-size: 10pt; border-collapse: collapse; width: 100%; margin: 14px 0;">
+                <thead>
+                    <tr>
+                        <th style="width: 5%; padding: 4px;">No</th>
+                        <th style="padding: 4px;">รายการ</th>
+                        <th style="width: 18%; padding: 4px;">เลขที่ บสค.60</th>
+                        <th style="width: 18%; padding: 4px;">คำสั่งอนุญาตซื้อ/จ้าง</th>
+                        <th style="width: 12%; padding: 4px;">ว.ด.ป.</th>
+                        <th style="width: 18%; padding: 4px;">เหตุความจำเป็น</th>
+                        <th style="width: 14%; padding: 4px;">จำนวนเงิน</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td colspan="7" style="text-align: center; padding: 12px; color: #555;">ไม่มีรายการจัดซื้อจัดจ้างในเดือนนี้</td></tr>
+                </tbody>
+            </table>
+        `;
+    } else {
+        accountCodes.forEach(code => {
+            const group = groupedItems[code];
+            let groupTotal = 0;
+            let groupRows = "";
+
+            group.items.forEach(it => {
+                groupTotal += it.total;
+                groupRows += `
                     <tr>
                         <td>${itemIndex++}</td>
-                        <td class="text-left">${item.name}</td>
-                        <td>${cat ? cat.code : "-"}</td>
-                        <td>${doc.bskNumber || doc.docNumber || "-"}</td>
-                        <td>${doc.orderAuthority || "ตามคำสั่งที่ 4/2566"}</td>
-                        <td>${dateFormatted}</td>
-                        <td>${doc.necessityReason || "เพื่อใช้ในงานปฏิบัติงาน"}</td>
-                        <td style="text-align: right;">${itemTotal.toLocaleString("th-TH", { minimumFractionDigits: 2 })}</td>
+                        <td class="text-left">${it.name}</td>
+                        <td>${it.bskNumber}</td>
+                        <td>${it.orderAuthority}</td>
+                        <td>${it.dateFormatted}</td>
+                        <td>${it.necessityReason}</td>
+                        <td style="text-align: right;">${it.total.toLocaleString("th-TH", { minimumFractionDigits: 2 })}</td>
                     </tr>
                 `;
             });
+
+            reportContentHtml += `
+                <div style="margin-top: 14px; margin-bottom: 6px; font-weight: bold; font-size: 11pt; color: var(--thp-blue); display: flex; justify-content: space-between;">
+                    <span>📂 รหัสบัญชี: ${code} (${group.name})</span>
+                    <span>รวมรหัสบัญชีนี้: ${groupTotal.toLocaleString("th-TH", { minimumFractionDigits: 2 })} บาท</span>
+                </div>
+                <table class="item-table" style="font-size: 9.5pt; border-collapse: collapse; width: 100%; margin-bottom: 18px;">
+                    <thead>
+                        <tr>
+                            <th style="width: 5%; padding: 4px;">No</th>
+                            <th style="padding: 4px;">รายการ</th>
+                            <th style="width: 18%; padding: 4px;">เลขที่ บสค.60</th>
+                            <th style="width: 18%; padding: 4px;">คำสั่งอนุญาตซื้อ/จ้าง</th>
+                            <th style="width: 12%; padding: 4px;">ว.ด.ป.</th>
+                            <th style="width: 18%; padding: 4px;">เหตุความจำเป็น</th>
+                            <th style="width: 14%; padding: 4px;">จำนวนเงิน</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${groupRows}
+                    </tbody>
+                </table>
+            `;
         });
+
+        // ตารางสรุปยอดรวมเป็นเงินก้อนสุดท้ายที่ด้านล่างสุดของเอกสาร
+        reportContentHtml += `
+            <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11pt; border: 2px solid #000000;">
+                <tr>
+                    <td style="text-align: right; font-weight: bold; padding: 8px 12px; background-color: #f5f5f5; width: 80%;">รวมเป็นเงินทั้งสิ้นทุกรหัสบัญชี</td>
+                    <td style="text-align: right; font-weight: bold; padding: 8px 12px; font-size: 12pt; color: var(--thp-red);">${grandTotal.toLocaleString("th-TH", { minimumFractionDigits: 2 })} บาท</td>
+                </tr>
+            </table>
+        `;
     }
 
     const officeName = appState.settings.officeName || "ที่ทำการไปรษณีย์มาบตาพุด";
@@ -1771,33 +1857,11 @@ function printMonthlyReport() {
             ${officeName} ขอสรุปการซื้อและการจ้างประจำเดือน <b>${monthName}</b> <b>${yearName}</b> มาเพื่อทราบ
         </p>
 
-        <p style="font-weight: bold; margin-bottom: 8px; font-size: 11pt;">มีการซื้อและการจ้างรายละเอียดดังนี้</p>
+        <p style="font-weight: bold; margin-bottom: 8px; font-size: 11pt;">มีการซื้อและการจ้างจำแนกตามรหัสบัญชีรายละเอียดดังนี้</p>
 
-        <table class="item-table" style="font-size: 10pt; border-collapse: collapse; width: 100%; margin: 14px 0;">
-            <thead>
-                <tr>
-                    <th style="width: 5%; padding: 4px;">No</th>
-                    <th style="padding: 4px;">รายการ</th>
-                    <th style="width: 10%; padding: 4px;">รหัสบัญชี</th>
-                    <th style="width: 18%; padding: 4px;">เลขที่ บสค.60</th>
-                    <th style="width: 15%; padding: 4px;">คำสั่งอนุญาตซื้อ/จ้าง</th>
-                    <th style="width: 10%; padding: 4px;">ว.ด.ป.</th>
-                    <th style="width: 15%; padding: 4px;">เหตุความจำเป็น</th>
-                    <th style="width: 12%; padding: 4px;">จำนวนเงิน</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${reportRowsHtml ? reportRowsHtml : '<tr><td colspan="8" style="text-align: center; padding: 12px; color: #555;">ไม่มีรายการจัดซื้อจัดจ้างในเดือนนี้</td></tr>'}
-                <tr>
-                    <td colspan="7" style="text-align: right; font-weight: bold; padding: 5px 6px;">รวมเป็นเงิน</td>
-                    <td style="text-align: right; font-weight: bold; padding: 5px 6px;">${grandTotal.toLocaleString("th-TH", { minimumFractionDigits: 2 })}</td>
-                </tr>
-            </tbody>
-        </table>
+        ${reportContentHtml}
 
-        ${reportRowsHtml ? '' : '<p style="font-size: 11pt; margin-top: 10px; margin-bottom: 10px;">ไม่มีการซื้อและการจ้าง</p>'}
-
-        <p style="font-size: 11pt; margin-top: 10px; margin-bottom: 16px;">จึงเรียนมาเพื่อโปรดทราบ</p>
+        <p style="font-size: 11pt; margin-top: 14px; margin-bottom: 16px;">จึงเรียนมาเพื่อโปรดทราบ</p>
 
         <div class="sig-section">
             <div class="sig-block" style="width: 45%; text-align: center; font-size: 11pt; line-height: 1.35;">
