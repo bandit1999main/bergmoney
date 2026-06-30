@@ -608,17 +608,17 @@ function showSuggestions(input, boxElement) {
             }
 
             // เติมข้อมูลยานพาหนะถ้าเป็นครุภัณฑ์ยานพาหนะและมีค่าบันทึกอยู่
-            if (d.vehiclePlate) {
+            if (d.vehiclePlate || d.vehicleBrand || d.vehicleMileage) {
                 const plateInput = document.getElementById("vehiclePlate");
-                if (plateInput) plateInput.value = d.vehiclePlate;
-            }
-            if (d.vehicleBrand) {
+                if (plateInput) plateInput.value = d.vehiclePlate || "";
                 const brandInput = document.getElementById("vehicleBrand");
-                if (brandInput) brandInput.value = d.vehicleBrand;
-            }
-            if (d.vehicleMileage) {
+                if (brandInput) brandInput.value = d.vehicleBrand || "";
                 const mileageInput = document.getElementById("vehicleMileage");
-                if (mileageInput) mileageInput.value = d.vehicleMileage;
+                if (mileageInput) mileageInput.value = d.vehicleMileage || "";
+                
+                // ฝืนบังคับให้เปิดแสดงผลช่องกรอกข้อมูลยานพาหนะทันที
+                const mileageGroup = document.getElementById("vehicleMileageGroup");
+                if (mileageGroup) mileageGroup.style.display = "grid";
             }
 
             // ค้นหาประวัติจัดซื้อจัดจ้างครั้งล่าสุดสำหรับครุภัณฑ์ตัวนี้
