@@ -2112,18 +2112,82 @@ function renderBudgetQuotaTable(currentMonthStr) {
             limitPerMonthText = `${monthlyLimit.toLocaleString()} ฿`;
         }
 
-        const spentThisMonth = appState.documents
-            .filter(doc => doc.docDate && doc.docDate.startsWith(currentMonthStr) && doc.itemCategory === key)
-            .reduce((sum, doc) => sum + doc.total, 0);
+        const isVehicleCategory = ["car_repair_car", "car_repair_bike", "car_repair_boat", "car_repair_twowheel"].includes(key);
+        
+        let spentThisMonth = 0;
+        let remaining = Infinity;
+        let remainingText = "";
+        let spentText = "";
+        let statusBadge = "";
 
-        const remaining = (monthlyLimit !== undefined && monthlyLimit !== Infinity) ? (monthlyLimit - spentThisMonth) : Infinity;
-        let remainingText = remaining === Infinity ? "ไม่จำกัดงบรายเดือน" : `${remaining.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿`;
+        if (isVehicleCategory) {
+            // ดึงรายการซ่อมแซมยานพาหนะของเดือนนี้ทั้งหมด
+            const vehicleDocs = appState.documents.filter(doc => 
+                doc.docDate && doc.docDate.startsWith(currentMonthStr) && 
+                ["car_repair_car", "car_repair_bike", "car_repair_boat", "car_repair_twowheel"].includes(doc.itemCategory)
+            );
 
-        let statusBadge = `<span style="color:#10B981; font-weight:600;">พร้อมใช้งาน</span>`;
-        if (remaining <= 0 && remaining !== Infinity) {
-            statusBadge = `<span style="color:#EF4444; font-weight:600;">เต็มวงเงินแล้ว</span>`;
-        } else if (remaining < 1000 && remaining !== Infinity) {
-            statusBadge = `<span style="color:#F59E0B; font-weight:600;">ใกล้เต็ม</span>`;
+            // จัดกลุ่มยอดจ่ายตามทะเบียนรถ
+            const spentByPlate = {};
+            vehicleDocs.forEach(doc => {
+                const plate = doc.vehiclePlate ? doc.vehiclePlate.trim() : "ไม่ระบุทะเบียน";
+                spentByPlate[plate] = (spentByPlate[plate] || 0) + doc.total;
+            });
+
+            // ตรวจหาทะเบียนรถที่มีอยู่ในระบบทะเบียนครุภัณฑ์
+            const activePlates = new Set(Object.keys(spentByPlate));
+            appState.durables.forEach(d => {
+                const isDurableVehicle = ["car_repair_car", "car_repair_bike", "car_repair_boat", "car_repair_twowheel"].includes(d.category);
+                if (isDurableVehicle && d.vehiclePlate) {
+                    activePlates.add(d.vehiclePlate.trim());
+                }
+            });
+
+            let detailsList = [];
+            let lowestRemaining = Infinity;
+
+            activePlates.forEach(plate => {
+                if (!plate || plate === "ไม่ระบุทะเบียน") return;
+                const spent = spentByPlate[plate] || 0;
+                const rem = (monthlyLimit !== undefined && monthlyLimit !== Infinity) ? (monthlyLimit - spent) : Infinity;
+                if (rem < lowestRemaining) {
+                    lowestRemaining = rem;
+                }
+                
+                if (spent > 0 || rem !== Infinity) {
+                    detailsList.push(`<div style="font-size:0.75rem; color:var(--text-secondary); margin-top:2px;">🚗 ทะเบียน ${plate}: ใช้ไป ${spent.toLocaleString()}฿ (คงเหลือ ${rem === Infinity ? 'ไม่จำกัด' : rem.toLocaleString() + '฿'})</div>`);
+                }
+            });
+
+            spentThisMonth = vehicleDocs.filter(doc => doc.itemCategory === key).reduce((sum, doc) => sum + doc.total, 0);
+            spentText = `${spentThisMonth.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿<br/>${detailsList.join("")}`;
+            
+            remaining = lowestRemaining;
+            remainingText = remaining === Infinity ? "ไม่จำกัดงบรายเดือน" : `ขั้นต่ำเหลือ ${remaining.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿`;
+            
+            if (remaining <= 0 && remaining !== Infinity) {
+                statusBadge = `<span style="color:#EF4444; font-weight:600;">มีรถที่เต็มวงเงิน</span>`;
+            } else if (remaining < 1000 && remaining !== Infinity) {
+                statusBadge = `<span style="color:#F59E0B; font-weight:600;">ใกล้เต็มบางคัน</span>`;
+            } else {
+                statusBadge = `<span style="color:#10B981; font-weight:600;">พร้อมใช้งาน</span>`;
+            }
+        } else {
+            spentThisMonth = appState.documents
+                .filter(doc => doc.docDate && doc.docDate.startsWith(currentMonthStr) && doc.itemCategory === key)
+                .reduce((sum, doc) => sum + doc.total, 0);
+            spentText = `${spentThisMonth.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿`;
+            
+            remaining = (monthlyLimit !== undefined && monthlyLimit !== Infinity) ? (monthlyLimit - spentThisMonth) : Infinity;
+            remainingText = remaining === Infinity ? "ไม่จำกัดงบรายเดือน" : `${remaining.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿`;
+            
+            if (remaining <= 0 && remaining !== Infinity) {
+                statusBadge = `<span style="color:#EF4444; font-weight:600;">เต็มวงเงินแล้ว</span>`;
+            } else if (remaining < 1000 && remaining !== Infinity) {
+                statusBadge = `<span style="color:#F59E0B; font-weight:600;">ใกล้เต็ม</span>`;
+            } else {
+                statusBadge = `<span style="color:#10B981; font-weight:600;">พร้อมใช้งาน</span>`;
+            }
         }
 
         const row = `
@@ -2131,7 +2195,7 @@ function renderBudgetQuotaTable(currentMonthStr) {
                 <td style="font-weight:600;">${rule.name} <span style="font-size:0.75rem; color:var(--text-secondary); display:block;">รหัสบัญชี: ${rule.code}</span></td>
                 <td>${limitPerRequestText}</td>
                 <td>${limitPerMonthText}</td>
-                <td style="font-weight:500;">${spentThisMonth.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿</td>
+                <td style="font-weight:500; font-size: 0.85rem; line-height: 1.4;">${spentText}</td>
                 <td style="font-weight:600; color: ${remaining <= 0 ? '#EF4444' : 'inherit'}">${remainingText}</td>
                 <td>${statusBadge}</td>
             </tr>
