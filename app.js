@@ -2818,6 +2818,7 @@ window.printDashboardReport = function() {
         }
 
         let spentThisMonth = 0;
+        let spentText = "";
 
         const isVehicleCategory = ["car_repair_car", "car_repair_bike", "car_repair_boat", "car_repair_twowheel"].includes(key);
 
