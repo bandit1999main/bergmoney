@@ -429,6 +429,22 @@ function setupEventHandlers() {
         });
     });
 
+    // ปุ่มซ่อนเมนูทางซ้าย (Toggle Sidebar)
+    const sidebarToggleBtn = document.getElementById("sidebarToggleBtn");
+    const asideEl = document.querySelector("aside");
+    if (sidebarToggleBtn && asideEl) {
+        // กู้คืนสถานะที่เคยซ่อนไว้
+        const isCollapsed = localStorage.getItem("thp_sidebar_collapsed") === "true";
+        if (isCollapsed) {
+            asideEl.classList.add("collapsed");
+        }
+
+        sidebarToggleBtn.addEventListener("click", () => {
+            asideEl.classList.toggle("collapsed");
+            localStorage.setItem("thp_sidebar_collapsed", asideEl.classList.contains("collapsed"));
+        });
+    }
+
     // ปุ่มโหมดหน้าต่าง
     document.getElementById("themeToggleBtn").addEventListener("click", () => {
         const body = document.body;
