@@ -405,6 +405,16 @@ async function initApp() {
     const requesterPositionInput = document.getElementById("requesterPosition");
     if (requesterPositionInput) requesterPositionInput.value = appState.settings.officerPosition;
 
+    const memoNumberInput = document.getElementById("memoNumber");
+    if (memoNumberInput && (!memoNumberInput.value || memoNumberInput.value === "")) {
+        memoNumberInput.value = "ปณท ปข.2(21150)/";
+    }
+
+    const orderAuthorityInput = document.getElementById("orderAuthority");
+    if (orderAuthorityInput && (!orderAuthorityInput.value || orderAuthorityInput.value === "" || orderAuthorityInput.value === "ตามคำสั่งที่ 4/2566")) {
+        orderAuthorityInput.value = "4/2566 เลขที่กันงบ";
+    }
+
     renderLimitsSettingsTable();
     updateUIElements();
 
@@ -1058,8 +1068,11 @@ async function handleBskSubmit(e) {
 
         const orderAuthIn = document.getElementById("orderAuthority");
         const necReasonIn = document.getElementById("necessityReason");
-        if (orderAuthIn) orderAuthIn.value = "ตามคำสั่งที่ 4/2566";
+        if (orderAuthIn) orderAuthIn.value = "4/2566 เลขที่กันงบ";
         if (necReasonIn) necReasonIn.value = "เพื่อใช้ในงานปฏิบัติงาน";
+
+        const memoNumberIn = document.getElementById("memoNumber");
+        if (memoNumberIn) memoNumberIn.value = "ปณท ปข.2(21150)/";
 
         document.getElementById("vehicleMileage").value = "";
         document.getElementById("vehiclePlate").value = "";
@@ -1690,7 +1703,7 @@ function renderMonthlyReportTable() {
                     <td>${item.durableCode || "-"}</td>
                     <td>${cat ? cat.code : "-"}</td>
                     <td>บสค. 60 เลขที่ ${doc.bskNumber || doc.docNumber || "-"}</td>
-                    <td>${doc.orderAuthority || "ตามคำสั่งที่ 4/2566"}</td>
+                    <td>${doc.orderAuthority || "4/2566 เลขที่กันงบ"}</td>
                     <td>${dateFormatted}</td>
                     <td>${doc.necessityReason || "เพื่อใช้ในงานปฏิบัติงาน"}</td>
                     <td style="text-align:right; font-weight:600;">${itemTotal.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿</td>
@@ -1869,7 +1882,7 @@ function printMonthlyReport() {
                 groupedItems[accountCode].items.push({
                     name: item.name,
                     bskNumber: doc.bskNumber || doc.docNumber || "-",
-                    orderAuthority: doc.orderAuthority || "ตามคำสั่งที่ 4/2566",
+                    orderAuthority: doc.orderAuthority || "4/2566 เลขที่กันงบ",
                     dateFormatted: dateFormatted,
                     necessityReason: doc.necessityReason || "เพื่อใช้ในงานปฏิบัติงาน",
                     total: itemTotal
