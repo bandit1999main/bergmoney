@@ -1151,13 +1151,14 @@
                                         <th rowspan="2" style="width: 5%; text-align: center; vertical-align: middle;">ลำดับ</th>
                                         <th rowspan="2" style="width: 20%; text-align: center; vertical-align: middle;">รายการจัดซื้อ/จัดจ้าง</th>
                                         <th rowspan="2" style="width: 15%; text-align: center; vertical-align: middle;">รหัสครุภัณฑ์ / ประเภท</th>
-                                        <th colspan="3" style="width: 20%; text-align: center; border-bottom: 1px solid var(--border-color);">ซื้อ/จ้าง ครั้งล่าสุด</th>
+                                        <th colspan="4" style="width: 25%; text-align: center; border-bottom: 1px solid var(--border-color);">ซื้อ/จ้าง ครั้งล่าสุด</th>
                                         <th colspan="4" style="width: 30%; text-align: center; border-bottom: 1px solid var(--border-color);">ซื้อ/จ้าง ครั้งนี้</th>
                                         <th rowspan="2" style="width: 5%;"></th>
                                     </tr>
                                     <tr>
                                         <th style="font-size: 0.8rem; text-align: center;">ว.ด.ป.</th>
                                         <th style="font-size: 0.8rem; text-align: center;">จำนวน</th>
+                                        <th style="font-size: 0.8rem; text-align: center;">ราคาต่อหน่วย</th>
                                         <th style="font-size: 0.8rem; text-align: center;">เงิน (บาท)</th>
                                         <th style="font-size: 0.8rem; text-align: center;">จำนวน</th>
                                         <th style="font-size: 0.8rem; text-align: center;">หน่วยนับ</th>
@@ -1182,6 +1183,7 @@
                                         </td>
                                         <td><input type="date" class="item-last-date" style="width: 100%;"></td>
                                         <td><input type="text" class="item-last-qty" placeholder="จำนวน/หน่วย" style="width: 100%; text-align: center;"></td>
+                                        <td><input type="number" class="item-last-unit-price" placeholder="ราคา/ชิ้น" min="0" step="0.01" style="width: 100%; text-align: right;"></td>
                                         <td><input type="number" class="item-last-price" placeholder="0.00" min="0" step="0.01" style="width: 100%; text-align: right;"></td>
                                         <td><input type="number" class="item-qty" value="1" min="0" required style="width: 100%; text-align: center;"></td>
                                         <td><input type="text" class="item-unit" placeholder="เช่น เครื่อง, กล่อง" value="ชิ้น" required style="width: 100%; text-align: center;"></td>
@@ -1196,12 +1198,12 @@
                                 </tbody>
                                 <tfoot>
                                     <tr>
-                                        <td colspan="9" style="text-align: right; font-weight: bold;">รวมเงินทั้งสิ้น:</td>
+                                        <td colspan="10" style="text-align: right; font-weight: bold;">รวมเงินทั้งสิ้น:</td>
                                         <td id="formTotalDisplay" style="text-align: right; font-weight: bold; font-size: 1.1rem; color: var(--thp-red);">0.00 ฿</td>
                                         <td></td>
                                     </tr>
                                     <tr>
-                                        <td colspan="11" id="thaiBahtText" style="text-align: right; font-style: italic; color: var(--text-secondary);">(-)</td>
+                                        <td colspan="12" id="thaiBahtText" style="text-align: right; font-style: italic; color: var(--text-secondary);">(-)</td>
                                     </tr>
                                 </tfoot>
                             </table>
