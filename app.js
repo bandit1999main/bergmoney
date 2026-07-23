@@ -734,7 +734,7 @@ function showSuggestions(input, boxElement) {
             // ค้นหาประวัติจัดซื้อจัดจ้างครั้งล่าสุดสำหรับครุภัณฑ์ตัวนี้
             let lastDoc = null;
             let lastItem = null;
-            for (let i = appState.documents.length - 1; i >= 0; i--) {
+            for (let i = 0; i < appState.documents.length; i++) {
                 const doc = appState.documents[i];
                 const item = doc.items.find(it => it.name.trim() === d.name.trim());
                 if (item) {
