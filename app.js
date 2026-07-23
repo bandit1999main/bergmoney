@@ -480,8 +480,9 @@ function setupEventHandlers() {
         const editingId = document.getElementById("editingBskId").value;
         if (editingId) {
             const doc = appState.documents.find(d => d.id === editingId);
-            if (doc && doc.status === 'approved') {
-                alert("ไม่สามารถเพิ่มรายการในใบคำขอที่อนุมัติแล้วได้");
+            const isAdmin = currentUserProfile && currentUserProfile.role === 'admin';
+            if (doc && doc.status === 'approved' && !isAdmin) {
+                alert("ไม่สามารถเพิ่มรายการในใบคำขอที่อนุมัติแล้วได้ (เฉพาะผู้ดูแลระบบที่สามารถแก้ไขได้)");
                 return;
             }
         }
@@ -1363,6 +1364,12 @@ function renderHistoryTable(filteredDocs) {
         } else if (status === "rejected") {
             statusBadge = `<span style="background-color:rgba(239,68,68,0.15); color:#EF4444; padding:4px 10px; border-radius:12px; font-size:0.75rem; font-weight:700; display:inline-block;">🔴 ไม่อนุมัติ</span>`;
             actionsHtml = `
+                <button class="btn btn-secondary" style="padding: 4px 8px; font-size:0.8rem;" onclick="window.editDocument('${doc.id}')" title="แก้ไข">
+                    <span class="material-symbols-outlined" style="font-size:16px;">edit</span> แก้ไข
+                </button>
+                <button class="btn btn-secondary" style="padding: 4px 8px; font-size:0.8rem;" onclick="window._printDocument('${doc.id}')" title="พิมพ์ใบคำขอ บสค.60">
+                    <span class="material-symbols-outlined" style="font-size:16px;">print</span> พิมพ์
+                </button>
                 <button class="btn btn-danger" style="padding: 4px 10px; font-size:0.8rem;" onclick="window._deleteDocument('${doc.id}')">
                     <span class="material-symbols-outlined" style="font-size:16px;">delete</span> ลบ
                 </button>
@@ -1375,6 +1382,9 @@ function renderHistoryTable(filteredDocs) {
                 </button>
                 <button class="btn btn-secondary" style="padding: 4px 8px; font-size:0.8rem;" onclick="window.editDocument('${doc.id}')" title="แก้ไข">
                     <span class="material-symbols-outlined" style="font-size:16px;">edit</span> แก้ไข
+                </button>
+                <button class="btn btn-secondary" style="padding: 4px 8px; font-size:0.8rem;" onclick="window._printDocument('${doc.id}')" title="พิมพ์ใบคำขอ บสค.60">
+                    <span class="material-symbols-outlined" style="font-size:16px;">print</span> พิมพ์
                 </button>
                 <button class="btn btn-danger" style="padding: 4px 8px; font-size:0.8rem;" onclick="window._deleteDocument('${doc.id}')" title="ปฏิเสธและลบทิ้ง">
                     <span class="material-symbols-outlined" style="font-size:16px;">delete</span> ปฏิเสธ/ลบ
@@ -1543,10 +1553,11 @@ window.editDocument = function(docId) {
     document.getElementById("quotationYes").checked = hasQuot;
     document.getElementById("quotationNo").checked = !hasQuot;
 
-    const isApproved = doc.status === "approved";
+    const isAdmin = currentUserProfile && currentUserProfile.role === "admin";
+    const isLocked = doc.status === "approved" && !isAdmin;
     const addItemBtn = document.getElementById("addItemBtn");
     if (addItemBtn) {
-        addItemBtn.style.display = isApproved ? "none" : "inline-flex";
+        addItemBtn.style.display = isLocked ? "none" : "inline-flex";
     }
 
     const tbody = document.getElementById("formTableBody");
@@ -1574,9 +1585,9 @@ window.editDocument = function(docId) {
         if (item.price !== undefined) item.price = parseFloat(item.price) || 0;
 
         const rowCount = index + 1;
-        const disabledAttr = isApproved ? "readonly disabled style='background-color: var(--bg-app); opacity: 0.8;'" : "";
-        const selectDisabledAttr = isApproved ? "disabled style='background-color: var(--bg-app); opacity: 0.8;'" : "";
-        const deleteButtonHtml = isApproved ? "" : `
+        const disabledAttr = isLocked ? "readonly disabled style='background-color: var(--bg-app); opacity: 0.8;'" : "";
+        const selectDisabledAttr = isLocked ? "disabled style='background-color: var(--bg-app); opacity: 0.8;'" : "";
+        const deleteButtonHtml = isLocked ? "" : `
             <button type="button" class="btn-icon-only remove-row-btn" style="margin: auto;">
                 <span class="material-symbols-outlined">delete</span>
             </button>
@@ -1613,7 +1624,7 @@ window.editDocument = function(docId) {
         tbody.insertAdjacentHTML("beforeend", rowHtml);
         
         const rowElement = tbody.lastElementChild;
-        if (!isApproved) {
+        if (!isLocked) {
             bindAutoSuggest(rowElement);
             const removeBtn = rowElement.querySelector(".remove-row-btn");
             if (removeBtn) {
