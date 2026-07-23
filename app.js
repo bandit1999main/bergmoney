@@ -837,6 +837,8 @@ function checkQuotaLimits() {
     const category = document.getElementById("itemCategory").value;
     if (!category) return;
 
+    const editingId = document.getElementById("editingBskId") ? document.getElementById("editingBskId").value : "";
+
     const rows = document.querySelectorAll("#formTableBody tr");
     let total = 0;
     rows.forEach(row => {
@@ -861,7 +863,8 @@ function checkQuotaLimits() {
 
     const limitMonth = getLimitPerMonth(category, group);
     if (limitMonth !== undefined && limitMonth !== Infinity && !isOverLimit) {
-        const currentMonthStr = document.getElementById("docDate").value.substring(0, 7);
+        const docDateVal = document.getElementById("docDate").value;
+        const currentMonthStr = docDateVal ? docDateVal.substring(0, 7) : new Date().toISOString().substring(0, 7);
         const isVehicleCategory = ["car_repair_car", "car_repair_bike", "car_repair_boat", "car_repair_twowheel"].includes(category);
         
         if (isVehicleCategory) {
@@ -870,7 +873,8 @@ function checkQuotaLimits() {
             if (vehiclePlate) {
                 const spentThisMonth = appState.documents
                     .filter(doc => 
-                        doc.docDate.startsWith(currentMonthStr) && 
+                        doc.id !== editingId &&
+                        doc.docDate && doc.docDate.startsWith(currentMonthStr) && 
                         ["car_repair_car", "car_repair_bike", "car_repair_boat", "car_repair_twowheel"].includes(doc.itemCategory) &&
                         doc.vehiclePlate && doc.vehiclePlate.trim().toLowerCase() === vehiclePlate.toLowerCase()
                     )
@@ -884,7 +888,7 @@ function checkQuotaLimits() {
         } else {
             // หมวดหมู่ปกติ: คัดกรองตามหมวดรายจ่ายตามปกติ
             const spentThisMonth = appState.documents
-                .filter(doc => doc.docDate.startsWith(currentMonthStr) && doc.itemCategory === category)
+                .filter(doc => doc.id !== editingId && doc.docDate && doc.docDate.startsWith(currentMonthStr) && doc.itemCategory === category)
                 .reduce((sum, doc) => sum + doc.total, 0);
 
             if (spentThisMonth + total > limitMonth) {
@@ -1638,6 +1642,8 @@ window.editDocument = function(docId) {
     });
 
     document.getElementById("saveDocBtn").innerHTML = `<span class="material-symbols-outlined">edit</span> บันทึกการแก้ไข บสค.60`;
+    calculateFormTotal();
+    checkQuotaLimits();
     switchTab("bsk60-form");
 };
 
