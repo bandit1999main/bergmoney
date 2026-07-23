@@ -913,6 +913,9 @@
             <div class="menu-item" data-tab="monthly-report">
                 <span class="material-symbols-outlined">analytics</span> สรุปรายเดือน (แบบที่ 3)
             </div>
+            <div class="menu-item" data-tab="budget-overview">
+                <span class="material-symbols-outlined">account_balance_wallet</span> วิเคราะห์งบประมาณรวม
+            </div>
             <div class="menu-item" data-tab="settings">
                 <span class="material-symbols-outlined">settings</span> ตั้งค่าหน่วยงาน
             </div>
@@ -1385,6 +1388,101 @@
                 </div>
             </div>
 
+            <!-- Tab: Budget Overview Dashboard -->
+            <div class="tab-pane" id="budget-overview">
+                <div class="panel">
+                    <div class="panel-header" style="margin-bottom: 1.5rem;">
+                        <h2>วิเคราะห์งบประมาณและโควตาสะสมรายปี/รายเดือน (YTD Budget Analysis)</h2>
+                        <div style="display: flex; gap: 0.75rem; align-items: center;">
+                            <label style="font-weight: 600; color: var(--text-primary);">เลือกปีงบประมาณ:</label>
+                            <select id="budgetYearSelect" style="width: 120px; padding: 0.5rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);"></select>
+                            <label style="font-weight: 600; color: var(--text-primary);">เลือกเดือนเปรียบเทียบ:</label>
+                            <select id="budgetMonthSelect" style="width: 160px; padding: 0.5rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);"></select>
+                        </div>
+                    </div>
+
+                    <!-- Summary Info Cards Row -->
+                    <div class="metrics-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem;">
+                        <div class="metric-card" style="background-color: var(--bg-card); padding: 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                                <span style="font-weight: 600; color: var(--text-secondary); font-size: 0.9rem;">การใช้วงเงินสะสมรายเดือน</span>
+                                <span class="material-symbols-outlined" style="color: var(--thp-red);">calendar_today</span>
+                            </div>
+                            <h3 id="budgetMonthSpentText" style="font-size: 1.75rem; font-weight: bold; margin-bottom: 0.5rem; color: var(--text-primary);">0.00 ฿</h3>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="flex-grow: 1; height: 8px; background-color: var(--bg-app); border-radius: 4px; overflow: hidden;">
+                                    <div id="budgetMonthProgressBar" style="width: 0%; height: 100%; background-color: var(--thp-red); transition: width 0.3s ease;"></div>
+                                </div>
+                                <span id="budgetMonthPercentText" style="font-size: 0.85rem; font-weight: 600; color: var(--text-primary);">0%</span>
+                            </div>
+                            <span id="budgetMonthLimitText" style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px; display: block;">จากงบประมาณรายเดือนรวม: 0.00 ฿</span>
+                        </div>
+
+                        <div class="metric-card" style="background-color: var(--bg-card); padding: 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                                <span style="font-weight: 600; color: var(--text-secondary); font-size: 0.9rem;">การใช้วงเงินสะสมรายปี (YTD)</span>
+                                <span class="material-symbols-outlined" style="color: var(--thp-blue);">account_balance</span>
+                            </div>
+                            <h3 id="budgetYearSpentText" style="font-size: 1.75rem; font-weight: bold; margin-bottom: 0.5rem; color: var(--text-primary);">0.00 ฿</h3>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="flex-grow: 1; height: 8px; background-color: var(--bg-app); border-radius: 4px; overflow: hidden;">
+                                    <div id="budgetYearProgressBar" style="width: 0%; height: 100%; background-color: var(--thp-blue); transition: width 0.3s ease;"></div>
+                                </div>
+                                <span id="budgetYearPercentText" style="font-size: 0.85rem; font-weight: 600; color: var(--text-primary);">0%</span>
+                            </div>
+                            <span id="budgetYearLimitText" style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px; display: block;">จากงบประมาณรายปีรวม: 0.00 ฿</span>
+                        </div>
+
+                        <div class="metric-card" style="background-color: var(--bg-card); padding: 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                                <span style="font-weight: 600; color: var(--text-secondary); font-size: 0.9rem;">สถานะการควบคุมโควตา</span>
+                                <span class="material-symbols-outlined" id="budgetStatusIcon" style="color: var(--thp-green);">check_circle</span>
+                            </div>
+                            <h3 id="budgetStatusText" style="font-size: 1.5rem; font-weight: bold; margin-bottom: 0.5rem; color: var(--thp-green);">ปกติ</h3>
+                            <span id="budgetStatusDesc" style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.3; display: block;">ไม่มีประเภทพัสดุใดใช้งบประมาณเกินขีดจำกัดสะสม</span>
+                        </div>
+                    </div>
+
+                    <!-- Chart & Table section -->
+                    <div style="display: grid; grid-template-columns: 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                        <!-- Budget Table Card -->
+                        <div style="background-color: var(--bg-card); padding: 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
+                            <h3 style="margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; display: flex; align-items: center; gap: 6px;">
+                                <span class="material-symbols-outlined">table_view</span> รายละเอียดโควตาและการใช้พัสดุสะสมแยกตามหมวดหมู่
+                            </h3>
+                            <div class="table-responsive">
+                                <table class="data-table" style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+                                    <thead>
+                                        <tr style="border-bottom: 2px solid var(--border-color);">
+                                            <th>หมวดหมู่รายจ่าย</th>
+                                            <th style="text-align: right; width: 12%;">งบรายเดือน</th>
+                                            <th style="text-align: right; width: 12%;">ใช้ไปเดือนนี้</th>
+                                            <th style="text-align: center; width: 10%;">% เดือน</th>
+                                            <th style="text-align: right; width: 12%;">งบรายปี</th>
+                                            <th style="text-align: right; width: 12%;">ใช้ไปปีนี้ (YTD)</th>
+                                            <th style="text-align: center; width: 10%;">% ปี</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="budgetOverviewTableBody">
+                                        <!-- JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Charts Card -->
+                        <div style="background-color: var(--bg-card); padding: 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
+                            <h3 style="margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; display: flex; align-items: center; gap: 6px;">
+                                <span class="material-symbols-outlined">bar_chart</span> กราฟวิเคราะห์การใช้งบประมาณรายหมวดหมู่ (เปรียบเทียบยอดจริง vs โควตา)
+                            </h3>
+                            <div style="position: relative; height: 350px; width: 100%;">
+                                <canvas id="budgetComparisonChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Tab: Settings -->
             <div class="tab-pane" id="settings">
                 <div class="panel">
@@ -1434,6 +1532,7 @@
                                         <th style="padding: 0.75rem; font-weight: 600; text-align: center; width: 120px;">รหัสบัญชี</th>
                                         <th style="padding: 0.75rem; font-weight: 600; text-align: right; width: 180px;">ต่อครั้งสูงสุด (บาท)</th>
                                         <th style="padding: 0.75rem; font-weight: 600; text-align: right; width: 180px;">ต่อเดือนสูงสุด (บาท)</th>
+                                        <th style="padding: 0.75rem; font-weight: 600; text-align: right; width: 180px;">ต่อปีสูงสุด (บาท)</th>
                                     </tr>
                                 </thead>
                                 <tbody id="limitsSettingsTableBody">

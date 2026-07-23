@@ -536,6 +536,15 @@ function setupEventHandlers() {
     document.getElementById("reportMonthSelect").addEventListener("change", renderMonthlyReportTable);
     document.getElementById("printReportBtn").addEventListener("click", printMonthlyReport);
 
+    const budgetYearSelect = document.getElementById("budgetYearSelect");
+    if (budgetYearSelect) {
+        budgetYearSelect.addEventListener("change", renderBudgetOverviewTable);
+    }
+    const budgetMonthSelect = document.getElementById("budgetMonthSelect");
+    if (budgetMonthSelect) {
+        budgetMonthSelect.addEventListener("change", renderBudgetOverviewTable);
+    }
+
     // ปุ่ม Logout (หน้า Account Settings)
     document.getElementById("logoutBtn").addEventListener("click", handleLogout);
 }
@@ -554,6 +563,7 @@ function switchTab(tabId) {
         "history": "เช็คสถานะการขออนุมัติ บสค. 60",
         "inventory": "จัดการทะเบียนข้อมูลครุภัณฑ์",
         "monthly-report": "สรุปรายการซื้อและการจ้างประจำเดือน (แบบที่ 3)",
+        "budget-overview": "วิเคราะห์และควบคุมงบประมาณรายปี/รายเดือน",
         "settings": "ตั้งค่าข้อมูลที่ทำการไปรษณีย์และรหัสหน่วยงาน",
         "user-management": "จัดการผู้ใช้งานระบบ",
         "account-settings": "บัญชีผู้ใช้งาน"
@@ -570,6 +580,9 @@ function switchTab(tabId) {
         renderDurableTable();
     } else if (tabId === "monthly-report") {
         renderMonthlyReportTable();
+    } else if (tabId === "budget-overview") {
+        initBudgetOverviewFilters();
+        renderBudgetOverviewTable();
     } else if (tabId === "user-management") {
         renderUserManagementTable();
     } else if (tabId === "account-settings") {
@@ -2054,6 +2067,15 @@ async function handleSettingsSubmit(e) {
         }
     });
 
+    document.querySelectorAll("#limitsSettingsTableBody .limit-year-input").forEach(input => {
+        const cat = input.getAttribute("data-category");
+        const val = input.value.trim();
+        if (val !== "") {
+            if (!customLimits[cat]) customLimits[cat] = {};
+            customLimits[cat].limitPerYear = parseFloat(val);
+        }
+    });
+
     appState.settings.customLimits = customLimits;
 
     try {
@@ -2514,6 +2536,7 @@ function renderLimitsSettingsTable() {
 
         const reqLimit = custom.limitPerRequest !== undefined ? custom.limitPerRequest : "";
         const monthLimit = custom.limitPerMonth !== undefined ? custom.limitPerMonth : "";
+        const yearLimit = custom.limitPerYear !== undefined ? custom.limitPerYear : "";
 
         let defaultReqPlaceholder = "";
         if (rule.limitPerRequest) {
@@ -2542,6 +2565,24 @@ function renderLimitsSettingsTable() {
             defaultMonthPlaceholder = "ไม่จำกัด";
         }
 
+        let defaultYearPlaceholder = "";
+        if (rule.limitPerMonth) {
+            let baseMonth = 0;
+            if (typeof rule.limitPerMonth === "object") {
+                const grp = appState.settings.group;
+                baseMonth = rule.limitPerMonth[grp];
+            } else if (rule.limitPerMonth !== Infinity) {
+                baseMonth = rule.limitPerMonth;
+            }
+            if (baseMonth) {
+                defaultYearPlaceholder = baseMonth * 12;
+            } else {
+                defaultYearPlaceholder = "ไม่จำกัด";
+            }
+        } else {
+            defaultYearPlaceholder = "ไม่จำกัด";
+        }
+
         const row = document.createElement("tr");
         row.style.borderBottom = "1px solid var(--border-color)";
         row.innerHTML = `
@@ -2552,6 +2593,9 @@ function renderLimitsSettingsTable() {
             </td>
             <td style="padding: 0.75rem; text-align: right;">
                 <input type="number" class="limit-month-input" data-category="${key}" value="${monthLimit}" placeholder="${defaultMonthPlaceholder}" style="width: 130px; padding: 0.35rem 0.5rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); text-align: right; background-color: var(--bg-card); color: var(--text-primary);">
+            </td>
+            <td style="padding: 0.75rem; text-align: right;">
+                <input type="number" class="limit-year-input" data-category="${key}" value="${yearLimit}" placeholder="${defaultYearPlaceholder}" style="width: 130px; padding: 0.35rem 0.5rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); text-align: right; background-color: var(--bg-card); color: var(--text-primary);">
             </td>
         `;
         tbody.appendChild(row);
@@ -3265,3 +3309,297 @@ window.printDurableHistory = function() {
 
     window.print();
 };
+
+// =========================================================================
+// YTD BUDGET OVERVIEW DASHBOARD & REPORTING
+// =========================================================================
+
+function initBudgetOverviewFilters() {
+    const yearSelect = document.getElementById("budgetYearSelect");
+    const monthSelect = document.getElementById("budgetMonthSelect");
+    if (!yearSelect || !monthSelect) return;
+
+    // Populate Years
+    const years = new Set([new Date().getFullYear()]);
+    appState.documents.forEach(doc => {
+        if (doc.docDate) {
+            const y = new Date(doc.docDate).getFullYear();
+            if (!isNaN(y)) years.add(y);
+        }
+    });
+    
+    const sortedYears = Array.from(years).sort((a, b) => b - a);
+    const prevYearVal = yearSelect.value;
+    yearSelect.innerHTML = "";
+    sortedYears.forEach(y => {
+        yearSelect.insertAdjacentHTML("beforeend", `<option value="${y}">${y + 543}</option>`);
+    });
+    if (prevYearVal && sortedYears.includes(parseInt(prevYearVal))) {
+        yearSelect.value = prevYearVal;
+    } else {
+        yearSelect.value = new Date().getFullYear();
+    }
+
+    // Populate Months
+    const months = [
+        { val: "01", name: "มกราคม" },
+        { val: "02", name: "กุมภาพันธ์" },
+        { val: "03", name: "มีนาคม" },
+        { val: "04", name: "เมษายน" },
+        { val: "05", name: "พฤษภาคม" },
+        { val: "06", name: "มิถุนายน" },
+        { val: "07", name: "กรกฎาคม" },
+        { val: "08", name: "สิงหาคม" },
+        { val: "09", name: "กันยายน" },
+        { val: "10", name: "ตุลาคม" },
+        { val: "11", name: "พฤศจิกายน" },
+        { val: "12", name: "ธันวาคม" }
+    ];
+    
+    const prevMonthVal = monthSelect.value;
+    monthSelect.innerHTML = "";
+    months.forEach(m => {
+        monthSelect.insertAdjacentHTML("beforeend", `<option value="${m.val}">${m.name}</option>`);
+    });
+    
+    const currentMonthStr = String(new Date().getMonth() + 1).padStart(2, "0");
+    if (prevMonthVal) {
+        monthSelect.value = prevMonthVal;
+    } else {
+        monthSelect.value = currentMonthStr;
+    }
+}
+
+function renderBudgetOverviewTable() {
+    const yearSelect = document.getElementById("budgetYearSelect");
+    const monthSelect = document.getElementById("budgetMonthSelect");
+    const tbody = document.getElementById("budgetOverviewTableBody");
+    if (!yearSelect || !monthSelect || !tbody) return;
+
+    const selectedYear = yearSelect.value;
+    const selectedMonth = `${selectedYear}-${monthSelect.value}`;
+
+    // Filter documents
+    const monthlyDocs = appState.documents.filter(doc => doc.docDate && doc.docDate.startsWith(selectedMonth));
+    const annualDocs = appState.documents.filter(doc => doc.docDate && doc.docDate.startsWith(selectedYear));
+
+    let grandMonthlyLimit = 0;
+    let grandMonthlySpent = 0;
+    let grandAnnualLimit = 0;
+    let grandAnnualSpent = 0;
+    let exceedCount = 0;
+
+    const categoriesData = [];
+    tbody.innerHTML = "";
+
+    Object.keys(BUDGET_RULES).forEach(key => {
+        const rule = BUDGET_RULES[key];
+        const custom = (appState.settings.customLimits && appState.settings.customLimits[key]) ? appState.settings.customLimits[key] : {};
+
+        // 1. Monthly Limit
+        let mLimit = 0;
+        if (custom.limitPerMonth !== undefined) {
+            mLimit = custom.limitPerMonth;
+        } else if (rule.limitPerMonth) {
+            if (typeof rule.limitPerMonth === "object") {
+                mLimit = rule.limitPerMonth[appState.settings.group || "A"] || 0;
+            } else if (rule.limitPerMonth !== Infinity) {
+                mLimit = rule.limitPerMonth;
+            }
+        }
+
+        // 2. Annual Limit
+        let yLimit = 0;
+        if (custom.limitPerYear !== undefined) {
+            yLimit = custom.limitPerYear;
+        } else {
+            yLimit = mLimit * 12; // Fallback
+        }
+
+        // 3. Monthly Spent
+        let mSpent = 0;
+        monthlyDocs.filter(d => d.itemCategory === key).forEach(d => {
+            d.items.forEach(item => {
+                mSpent += (parseFloat(item.qty) || 0) * (parseFloat(item.price) || 0);
+            });
+        });
+
+        // 4. Annual Spent
+        let ySpent = 0;
+        annualDocs.filter(d => d.itemCategory === key).forEach(d => {
+            d.items.forEach(item => {
+                ySpent += (parseFloat(item.qty) || 0) * (parseFloat(item.price) || 0);
+            });
+        });
+
+        grandMonthlyLimit += mLimit;
+        grandMonthlySpent += mSpent;
+        grandAnnualLimit += yLimit;
+        grandAnnualSpent += ySpent;
+
+        const mPercent = mLimit > 0 ? (mSpent / mLimit) * 100 : 0;
+        const yPercent = yLimit > 0 ? (ySpent / yLimit) * 100 : 0;
+
+        if (mSpent > mLimit && mLimit > 0) exceedCount++;
+        if (ySpent > yLimit && yLimit > 0) exceedCount++;
+
+        categoriesData.push({
+            name: rule.name,
+            code: rule.code,
+            mLimit,
+            mSpent,
+            mPercent,
+            yLimit,
+            ySpent,
+            yPercent
+        });
+
+        // Styles for progress indicator & percentages
+        const mColorClass = mPercent > 100 ? "color: var(--thp-red); font-weight: bold;" : (mPercent > 80 ? "color: orange; font-weight: bold;" : "color: var(--text-primary);");
+        const yColorClass = yPercent > 100 ? "color: var(--thp-red); font-weight: bold;" : (yPercent > 80 ? "color: orange; font-weight: bold;" : "color: var(--text-primary);");
+
+        const mLimitText = mLimit > 0 ? `${mLimit.toLocaleString("th-TH")} ฿` : "ไม่จำกัด";
+        const yLimitText = yLimit > 0 ? `${yLimit.toLocaleString("th-TH")} ฿` : "ไม่จำกัด";
+
+        const row = `
+            <tr style="border-bottom: 1px solid var(--border-color);">
+                <td style="padding: 0.75rem; font-weight: 500;">
+                    ${rule.name}
+                    <span style="font-size: 0.75rem; color: var(--text-secondary); display: block;">รหัส: ${rule.code}</span>
+                </td>
+                <td style="padding: 0.75rem; text-align: right; font-family: monospace;">${mLimitText}</td>
+                <td style="padding: 0.75rem; text-align: right; font-family: monospace; font-weight: 600;">${mSpent.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿</td>
+                <td style="padding: 0.75rem; text-align: center; font-family: monospace; ${mColorClass}">${mPercent.toFixed(1)}%</td>
+                <td style="padding: 0.75rem; text-align: right; font-family: monospace;">${yLimitText}</td>
+                <td style="padding: 0.75rem; text-align: right; font-family: monospace; font-weight: 600;">${ySpent.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿</td>
+                <td style="padding: 0.75rem; text-align: center; font-family: monospace; ${yColorClass}">${yPercent.toFixed(1)}%</td>
+            </tr>
+        `;
+        tbody.insertAdjacentHTML("beforeend", row);
+    });
+
+    // Update Summary Metrics
+    document.getElementById("budgetMonthSpentText").innerText = `${grandMonthlySpent.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿`;
+    document.getElementById("budgetMonthLimitText").innerText = `จากงบประมาณรายเดือนรวม: ${grandMonthlyLimit.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿`;
+    const mTotalPercent = grandMonthlyLimit > 0 ? Math.min(100, (grandMonthlySpent / grandMonthlyLimit) * 100) : 0;
+    document.getElementById("budgetMonthProgressBar").style.width = `${mTotalPercent}%`;
+    document.getElementById("budgetMonthPercentText").innerText = `${(grandMonthlyLimit > 0 ? (grandMonthlySpent / grandMonthlyLimit) * 100 : 0).toFixed(1)}%`;
+
+    document.getElementById("budgetYearSpentText").innerText = `${grandAnnualSpent.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿`;
+    document.getElementById("budgetYearLimitText").innerText = `จากงบประมาณรายปีรวม: ${grandAnnualLimit.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿`;
+    const yTotalPercent = grandAnnualLimit > 0 ? Math.min(100, (grandAnnualSpent / grandAnnualLimit) * 100) : 0;
+    document.getElementById("budgetYearProgressBar").style.width = `${yTotalPercent}%`;
+    document.getElementById("budgetYearPercentText").innerText = `${(grandAnnualLimit > 0 ? (grandAnnualSpent / grandAnnualLimit) * 100 : 0).toFixed(1)}%`;
+
+    // Status card
+    const statusTextEl = document.getElementById("budgetStatusText");
+    const statusDescEl = document.getElementById("budgetStatusDesc");
+    const statusIconEl = document.getElementById("budgetStatusIcon");
+
+    if (exceedCount > 0) {
+        statusTextEl.innerText = `เกินโควตา (${exceedCount})`;
+        statusTextEl.style.color = "var(--thp-red)";
+        statusDescEl.innerText = `มีรายการพัสดุจำนวน ${exceedCount} รายการที่มียอดสะสมเกินวงเงินจำกัดที่กำหนดไว้`;
+        statusIconEl.innerText = "warning";
+        statusIconEl.style.color = "var(--thp-red)";
+    } else {
+        statusTextEl.innerText = "ปกติ";
+        statusTextEl.style.color = "var(--thp-green)";
+        statusDescEl.innerText = "ไม่มีประเภทพัสดุใดใช้งบประมาณเกินขีดจำกัดสะสม";
+        statusIconEl.innerText = "check_circle";
+        statusIconEl.style.color = "var(--thp-green)";
+    }
+
+    // Render chart
+    renderBudgetComparisonChart(categoriesData);
+}
+
+function renderBudgetComparisonChart(categoriesData) {
+    const ctx = document.getElementById("budgetComparisonChart");
+    if (!ctx) return;
+
+    if (window.myBudgetOverviewChart) {
+        window.myBudgetOverviewChart.destroy();
+    }
+
+    const labels = categoriesData.map(c => c.name);
+    const mData = categoriesData.map(c => c.mPercent);
+    const yData = categoriesData.map(c => c.yPercent);
+
+    window.myBudgetOverviewChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'โควตารายเดือนที่ใช้ไป (%)',
+                    data: mData,
+                    backgroundColor: 'rgba(227, 24, 55, 0.75)', // THP Red
+                    borderColor: 'rgb(227, 24, 55)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'โควตารายปีที่ใช้ไป (YTD %)',
+                    data: yData,
+                    backgroundColor: 'rgba(9, 30, 66, 0.75)', // THP Navy/Blue
+                    borderColor: 'rgb(9, 30, 66)',
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'สัดส่วนการใช้งบประมาณ (%)',
+                        font: {
+                            family: 'Prompt',
+                            size: 12
+                        }
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    }
+                },
+                x: {
+                    ticks: {
+                        font: {
+                            family: 'Prompt',
+                            size: 9
+                        }
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.raw !== null) {
+                                label += context.raw.toFixed(1) + '%';
+                            }
+                            return label;
+                        }
+                    }
+                },
+                legend: {
+                    labels: {
+                        font: {
+                            family: 'Prompt',
+                            size: 11
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
