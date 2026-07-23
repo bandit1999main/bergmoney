@@ -1818,7 +1818,7 @@ function printDocument(docId) {
             </tr>
             <tr>
                 <td style="font-weight: bold; border-bottom: 1px solid #000000; padding-bottom: 6px;">เรื่อง:</td>
-                <td colspan="3" style="border-bottom: 1px solid #000000; padding-bottom: 6px;">ขอความเห็นชอบการจัดซื้อ/จัดจ้าง (ที่มอบอำนาจการซื้อและการจ้าง ${doc.orderAuthority || 'ตามคำสั่ง ปณท ที่ 4/2566'})</td>
+                <td colspan="3" style="border-bottom: 1px solid #000000; padding-bottom: 6px;">ขอความเห็นชอบการจัดซื้อ/จัดจ้าง (ที่มอบอำนาจการซื้อและการจ้างตามคำสั่ง ปณท ที่ 4/2566)</td>
             </tr>
             <tr>
                 <td style="font-weight: bold; padding-top: 6px;">เรียน:</td>
@@ -1827,7 +1827,7 @@ function printDocument(docId) {
         </table>
         
         <p style="text-indent: 1.5cm; margin-bottom: 8px; font-size: 11pt; line-height: 1.35; text-align: justify;">
-            ด้วย <b>${doc.officeName}</b> มีความจำเป็นต้องการจัดซื้อและจัดจ้างพัสดุบางประเภท (ที่มอบอำนาจการซื้อและการจ้าง ${doc.orderAuthority || 'ตามคำสั่ง ปณท ที่ 4/2566'}) ดังนี้:
+            ด้วย <b>${doc.officeName}</b> มีความจำเป็นต้องการจัดซื้อและจัดจ้างพัสดุบางประเภท (ที่มอบอำนาจการซื้อและการจ้างตามคำสั่ง ปณท ที่ 4/2566) ดังนี้:
         </p>
 
         ${categoryCheckboxesHtml}
