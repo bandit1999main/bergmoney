@@ -366,6 +366,7 @@ async function initApp() {
 
     // โหลด Documents จาก Firestore
     appState.documents = await fsGetDocuments();
+    sanitizeAllLoadedDocuments();
 
     // โหลด Durables จาก Firestore
     appState.durables = await getDurables();
@@ -1552,6 +1553,26 @@ window.editDocument = function(docId) {
     tbody.innerHTML = "";
 
     doc.items.forEach((item, index) => {
+        // Sanitize shifted/corrupted data
+        if (typeof item.qty === "string" && isNaN(parseFloat(item.qty))) {
+            const tempQty = item.lastPrice;
+            const tempUnit = item.qty;
+            const tempPrice = item.unit;
+            item.unit = tempUnit;
+            item.qty = parseFloat(tempQty) || 1;
+            if (tempPrice && !isNaN(parseFloat(tempPrice))) {
+                item.price = parseFloat(tempPrice);
+            }
+            item.lastPrice = parseFloat(item.lastUnitPrice) || parseFloat(item.lastPrice) || 0;
+            item.lastUnitPrice = "";
+        }
+        if (item.unit && !isNaN(parseFloat(item.unit))) {
+            item.price = parseFloat(item.unit);
+            item.unit = "ชิ้น";
+        }
+        if (item.qty !== undefined) item.qty = parseFloat(item.qty) || 0;
+        if (item.price !== undefined) item.price = parseFloat(item.price) || 0;
+
         const rowCount = index + 1;
         const disabledAttr = isApproved ? "readonly disabled style='background-color: var(--bg-app); opacity: 0.8;'" : "";
         const selectDisabledAttr = isApproved ? "disabled style='background-color: var(--bg-app); opacity: 0.8;'" : "";
@@ -2335,6 +2356,7 @@ async function importBackupData(e) {
 
                 // โหลดข้อมูลใหม่จาก Firestore
                 appState.documents = await fsGetDocuments();
+                sanitizeAllLoadedDocuments();
                 appState.durables = await getDurables();
                 const settings = await fsLoadSettings();
                 if (settings) appState.settings = settings;
@@ -3621,6 +3643,35 @@ function renderBudgetComparisonChart(categoriesData) {
                     }
                 }
             }
+        }
+    });
+}
+
+function sanitizeAllLoadedDocuments() {
+    if (!appState.documents) return;
+    appState.documents.forEach(doc => {
+        if (doc.items) {
+            doc.items.forEach(item => {
+                // Sanitize shifted/corrupted data
+                if (typeof item.qty === "string" && isNaN(parseFloat(item.qty))) {
+                    const tempQty = item.lastPrice;
+                    const tempUnit = item.qty;
+                    const tempPrice = item.unit;
+                    item.unit = tempUnit;
+                    item.qty = parseFloat(tempQty) || 1;
+                    if (tempPrice && !isNaN(parseFloat(tempPrice))) {
+                        item.price = parseFloat(tempPrice);
+                    }
+                    item.lastPrice = parseFloat(item.lastUnitPrice) || parseFloat(item.lastPrice) || 0;
+                    item.lastUnitPrice = "";
+                }
+                if (item.unit && !isNaN(parseFloat(item.unit))) {
+                    item.price = parseFloat(item.unit);
+                    item.unit = "ชิ้น";
+                }
+                if (item.qty !== undefined) item.qty = parseFloat(item.qty) || 0;
+                if (item.price !== undefined) item.price = parseFloat(item.price) || 0;
+            });
         }
     });
 }
