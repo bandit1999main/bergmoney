@@ -763,7 +763,13 @@ function calculateFormTotal() {
     rows.forEach(row => {
         const qty = parseFloat(row.querySelector(".item-qty").value) || 0;
         const price = parseFloat(row.querySelector(".item-price").value) || 0;
-        total += qty * price;
+        const rowTotal = qty * price;
+        total += rowTotal;
+        
+        const rowTotalInput = row.querySelector(".item-total-price");
+        if (rowTotalInput) {
+            rowTotalInput.value = rowTotal.toFixed(2);
+        }
     });
 
     document.getElementById("formTotalDisplay").innerText = `${total.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿`;
@@ -901,7 +907,8 @@ function addFormItemRow() {
             <td><input type="number" class="item-last-price" placeholder="0.00" min="0" step="0.01" style="width: 100%; text-align: right;"></td>
             <td><input type="number" class="item-qty" value="1" min="0" required style="width: 100%; text-align: center;"></td>
             <td><input type="text" class="item-unit" placeholder="เช่น เครื่อง, กล่อง" value="ชิ้น" required style="width: 100%; text-align: center;"></td>
-            <td><input type="number" class="item-price" placeholder="0.00" min="0" step="0.01" required style="width: 100%; text-align: right;"></td>
+            <td><input type="number" class="item-price" placeholder="ราคาต่อหน่วย" min="0" step="0.01" required style="width: 100%; text-align: right;"></td>
+            <td><input type="number" class="item-total-price" placeholder="0.00" readonly disabled style="width: 100%; text-align: right; background-color: var(--bg-app); border: none;"></td>
             <td>
                 <button type="button" class="btn-icon-only remove-row-btn" style="margin: auto;">
                     <span class="material-symbols-outlined">delete</span>
@@ -1066,7 +1073,8 @@ async function handleBskSubmit(e) {
                 <td><input type="number" class="item-last-price" placeholder="0.00" min="0" step="0.01" style="width: 100%; text-align: right;"></td>
                 <td><input type="number" class="item-qty" value="1" min="1" required style="width: 100%; text-align: center;"></td>
                 <td><input type="text" class="item-unit" placeholder="เช่น เครื่อง, กล่อง" value="ชิ้น" required style="width: 100%; text-align: center;"></td>
-                <td><input type="number" class="item-price" placeholder="0.00" min="0" step="0.01" required style="width: 100%; text-align: right;"></td>
+                <td><input type="number" class="item-price" placeholder="ราคาต่อหน่วย" min="0" step="0.01" required style="width: 100%; text-align: right;"></td>
+                <td><input type="number" class="item-total-price" placeholder="0.00" readonly disabled style="width: 100%; text-align: right; background-color: var(--bg-app); border: none;"></td>
                 <td>
                     <button type="button" class="btn-icon-only remove-row-btn" style="margin: auto;">
                         <span class="material-symbols-outlined">delete</span>
@@ -1540,7 +1548,8 @@ window.editDocument = function(docId) {
                 <td><input type="number" class="item-last-price" value="${item.lastPrice || ""}" placeholder="0.00" min="0" step="0.01" style="width: 100%; text-align: right;" ${disabledAttr}></td>
                 <td><input type="number" class="item-qty" value="${item.qty !== undefined ? item.qty : 1}" min="0" required style="width: 100%; text-align: center;" ${disabledAttr}></td>
                 <td><input type="text" class="item-unit" value="${item.unit || "ชิ้น"}" placeholder="เช่น เครื่อง, กล่อง" required style="width: 100%; text-align: center;" ${disabledAttr}></td>
-                <td><input type="number" class="item-price" value="${item.price || 0}" placeholder="0.00" min="0" step="0.01" required style="width: 100%; text-align: right;" ${disabledAttr}></td>
+                <td><input type="number" class="item-price" value="${item.price || 0}" placeholder="ราคาต่อหน่วย" min="0" step="0.01" required style="width: 100%; text-align: right;" ${disabledAttr}></td>
+                <td><input type="number" class="item-total-price" value="${((item.qty !== undefined ? item.qty : 1) * (item.price || 0)).toFixed(2)}" placeholder="0.00" readonly disabled style="width: 100%; text-align: right; background-color: var(--bg-app); border: none;" ${disabledAttr}></td>
                 <td>
                     ${deleteButtonHtml}
                 </td>
